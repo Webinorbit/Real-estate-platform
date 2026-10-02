@@ -1,0 +1,543 @@
+{
+ "notobj": {
+  "err": [
+   "|Invalid input: expected object, received undefined"
+  ]
+ },
+ "nullin": {
+  "err": [
+   "|Invalid input: expected object, received null"
+  ]
+ },
+ "titleMissing": {
+  "err": [
+   "title|Invalid input: expected string, received undefined"
+  ]
+ },
+ "titleShort": {
+  "err": [
+   "title|Give the listing a title"
+  ]
+ },
+ "titleLong": {
+  "err": [
+   "title|Too big: expected string to have <=140 characters"
+  ]
+ },
+ "titleNum": {
+  "err": [
+   "title|Invalid input: expected string, received number"
+  ]
+ },
+ "descNull": {
+  "err": [
+   "description|Invalid input: expected string, received null"
+  ]
+ },
+ "descLong": {
+  "err": [
+   "description|Too big: expected string to have <=10000 characters"
+  ]
+ },
+ "descNum": {
+  "err": [
+   "description|Invalid input: expected string, received number"
+  ]
+ },
+ "lt": {
+  "err": [
+   "listingType|Invalid option: expected one of \"SALE\"|\"RENT\""
+  ]
+ },
+ "ltMissing": {
+  "err": [
+   "listingType|Invalid option: expected one of \"SALE\"|\"RENT\""
+  ]
+ },
+ "type": {
+  "err": [
+   "type|Invalid option: expected one of \"APARTMENT\"|\"VILLA\"|\"HOUSE\"|\"PENTHOUSE\"|\"STUDIO\"|\"PLOT\"|\"COMMERCIAL\""
+  ]
+ },
+ "status": {
+  "err": [
+   "status|Invalid option: expected one of \"DRAFT\"|\"ACTIVE\"|\"PENDING\"|\"SOLD\"|\"RENTED\""
+  ]
+ },
+ "price0": {
+  "err": [
+   "price|Too small: expected number to be >=1"
+  ]
+ },
+ "priceEmpty": {
+  "err": [
+   "price|Too small: expected number to be >=1"
+  ]
+ },
+ "priceUndef": {
+  "err": [
+   "price|Invalid input: expected number, received NaN"
+  ]
+ },
+ "priceAbc": {
+  "err": [
+   "price|Invalid input: expected number, received NaN"
+  ]
+ },
+ "priceBig": {
+  "err": [
+   "price|Too big: expected number to be <=1000000000000"
+  ]
+ },
+ "priceNull": {
+  "err": [
+   "price|Too small: expected number to be >=1"
+  ]
+ },
+ "priceInf": {
+  "err": [
+   "price|Invalid input: expected number, received Infinity"
+  ]
+ },
+ "bedsFloat": {
+  "err": [
+   "beds|Invalid input: expected int, received number"
+  ]
+ },
+ "bedsNeg": {
+  "err": [
+   "beds|Too small: expected number to be >=0"
+  ]
+ },
+ "bedsBig": {
+  "err": [
+   "beds|Too big: expected number to be <=50"
+  ]
+ },
+ "bedsNegFloat": {
+  "err": [
+   "beds|Invalid input: expected int, received number"
+  ]
+ },
+ "bedsStr": {
+  "err": [
+   "beds|Invalid input: expected number, received NaN"
+  ]
+ },
+ "bedsNull": {
+  "ok": {
+   "title": "Nice flat",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 0,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": null,
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 1,
+   "lng": 2,
+   "amenities": [],
+   "images": [],
+   "videoUrl": null,
+   "featured": false,
+   "listingBrokerId": null
+  }
+ },
+ "bedsEmpty": {
+  "ok": {
+   "title": "Nice flat",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 0,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": null,
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 1,
+   "lng": 2,
+   "amenities": [],
+   "images": [],
+   "videoUrl": null,
+   "featured": false,
+   "listingBrokerId": null
+  }
+ },
+ "area": {
+  "err": [
+   "areaSqft|Too small: expected number to be >=0"
+  ]
+ },
+ "areaBig": {
+  "err": [
+   "areaSqft|Too big: expected number to be <=10000000"
+  ]
+ },
+ "yb": {
+  "err": [
+   "yearBuilt|Too small: expected number to be >=1800"
+  ]
+ },
+ "ybHi": {
+  "err": [
+   "yearBuilt|Too big: expected number to be <=2100"
+  ]
+ },
+ "ybF": {
+  "err": [
+   "yearBuilt|Invalid input: expected int, received number"
+  ]
+ },
+ "ybX": {
+  "err": [
+   "yearBuilt|Invalid input: expected number, received NaN"
+  ]
+ },
+ "ybEmpty": {
+  "ok": {
+   "title": "Nice flat",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 0,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": null,
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 1,
+   "lng": 2,
+   "amenities": [],
+   "images": [],
+   "videoUrl": null,
+   "featured": false,
+   "listingBrokerId": null
+  }
+ },
+ "furnLong": {
+  "err": [
+   "furnishing|Too big: expected string to have <=40 characters"
+  ]
+ },
+ "furnObj": {
+  "ok": {
+   "title": "Nice flat",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 0,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": "5",
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 1,
+   "lng": 2,
+   "amenities": [],
+   "images": [],
+   "videoUrl": null,
+   "featured": false,
+   "listingBrokerId": null
+  }
+ },
+ "furnWs": {
+  "ok": {
+   "title": "Nice flat",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 0,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": "",
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 1,
+   "lng": 2,
+   "amenities": [],
+   "images": [],
+   "videoUrl": null,
+   "featured": false,
+   "listingBrokerId": null
+  }
+ },
+ "parking": {
+  "err": [
+   "parking|Too big: expected number to be <=50"
+  ]
+ },
+ "floorBig": {
+  "err": [
+   "floor|Too big: expected number to be <=5000"
+  ]
+ },
+ "floorX": {
+  "err": [
+   "floor|Invalid input: expected number, received NaN"
+  ]
+ },
+ "floorNeg": {
+  "err": [
+   "floor|Too small: expected number to be >=0"
+  ]
+ },
+ "tfF": {
+  "err": [
+   "totalFloors|Invalid input: expected int, received number"
+  ]
+ },
+ "facingLong": {
+  "err": [
+   "facing|Too big: expected string to have <=30 characters"
+  ]
+ },
+ "addrLong": {
+  "err": [
+   "address|Too big: expected string to have <=240 characters"
+  ]
+ },
+ "locEmpty": {
+  "err": [
+   "locality|Locality is required"
+  ]
+ },
+ "locMissing": {
+  "err": [
+   "locality|Invalid input: expected string, received undefined"
+  ]
+ },
+ "locLong": {
+  "err": [
+   "locality|Too big: expected string to have <=80 characters"
+  ]
+ },
+ "cityEmpty": {
+  "err": [
+   "city|City is required"
+  ]
+ },
+ "stateLong": {
+  "err": [
+   "state|Too big: expected string to have <=80 characters"
+  ]
+ },
+ "pcLong": {
+  "err": [
+   "postalCode|Too big: expected string to have <=12 characters"
+  ]
+ },
+ "latHi": {
+  "err": [
+   "lat|Too big: expected number to be <=90"
+  ]
+ },
+ "latMissing": {
+  "err": [
+   "lat|Invalid input: expected number, received NaN"
+  ]
+ },
+ "latX": {
+  "err": [
+   "lat|Invalid input: expected number, received NaN"
+  ]
+ },
+ "latNull": {
+  "ok": {
+   "title": "Nice flat",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 0,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": null,
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 0,
+   "lng": 2,
+   "amenities": [],
+   "images": [],
+   "videoUrl": null,
+   "featured": false,
+   "listingBrokerId": null
+  }
+ },
+ "lngLo": {
+  "err": [
+   "lng|Too small: expected number to be >=-180"
+  ]
+ },
+ "amenStr": {
+  "err": [
+   "amenities|Invalid input: expected array, received string"
+  ]
+ },
+ "amenNum": {
+  "err": [
+   "amenities.0|Invalid input: expected string, received number"
+  ]
+ },
+ "amenNull": {
+  "err": [
+   "amenities|Invalid input: expected array, received null"
+  ]
+ },
+ "imgStr": {
+  "err": [
+   "images|Invalid input: expected array, received string"
+  ]
+ },
+ "imgNoUrl": {
+  "err": [
+   "images.0.url|Invalid input: expected string, received undefined"
+  ]
+ },
+ "imgEmptyUrl": {
+  "err": [
+   "images.0.url|Too small: expected string to have >=1 characters"
+  ]
+ },
+ "imgLongUrl": {
+  "err": [
+   "images.0.url|Too big: expected string to have <=600 characters"
+  ]
+ },
+ "imgLongAlt": {
+  "err": [
+   "images.0.alt|Too big: expected string to have <=200 characters"
+  ]
+ },
+ "imgMany": {
+  "err": [
+   "images|Too big: expected array to have <=40 items"
+  ]
+ },
+ "imgNotObj": {
+  "err": [
+   "images.0|Invalid input: expected object, received string"
+  ]
+ },
+ "imgAltNull": {
+  "err": [
+   "images.0.alt|Invalid input: expected string, received null"
+  ]
+ },
+ "vidLong": {
+  "err": [
+   "videoUrl|Too big: expected string to have <=400 characters"
+  ]
+ },
+ "brokerLong": {
+  "err": [
+   "listingBrokerId|Too big: expected string to have <=40 characters"
+  ]
+ },
+ "ok": {
+  "ok": {
+   "title": "Nice",
+   "description": "",
+   "listingType": "SALE",
+   "type": "APARTMENT",
+   "status": "ACTIVE",
+   "price": 100,
+   "priceUnit": null,
+   "beds": 3,
+   "baths": 0,
+   "areaSqft": 0,
+   "yearBuilt": null,
+   "furnishing": "a",
+   "parking": 0,
+   "floor": null,
+   "totalFloors": null,
+   "facing": null,
+   "address": "",
+   "locality": "L",
+   "city": "C",
+   "state": null,
+   "postalCode": null,
+   "lat": 1,
+   "lng": 2,
+   "amenities": [
+    "Gym"
+   ],
+   "images": [
+    {
+     "url": "a",
+     "alt": ""
+    }
+   ],
+   "videoUrl": null,
+   "featured": true,
+   "listingBrokerId": null
+  }
+ }
+}

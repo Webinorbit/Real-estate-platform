@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect width="800" height="520" fill="#ffffff"/>
+  <defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#eef0f3" stroke-width="1"/></pattern></defs>
+  <rect width="800" height="520" fill="url(#g)"/>
+  <g>
+    <rect x="40" y="40" width="380" height="250" fill="#f4efe6" stroke="#1f2937" stroke-width="5" stroke-linejoin="round"/>
+    <text x="230" y="171" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#374151">Living room</text>
+  </g>
+  <g>
+    <rect x="420" y="40" width="340" height="190" fill="#eef3f1" stroke="#1f2937" stroke-width="5" stroke-linejoin="round"/>
+    <text x="590" y="141" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#374151">Family lounge</text>
+  </g>
+  <g>
+    <rect x="420" y="230" width="340" height="130" fill="#f3eeea" stroke="#1f2937" stroke-width="5" stroke-linejoin="round"/>
+    <text x="590" y="301" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#374151">Study</text>
+  </g>
+  <g>
+    <rect x="40" y="290" width="380" height="190" fill="#eef0f6" stroke="#1f2937" stroke-width="5" stroke-linejoin="round"/>
+    <text x="230" y="391" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#374151">Master bedroom</text>
+  </g>
+  <g>
+    <rect x="420" y="360" width="340" height="120" fill="#e9f2e6" stroke="#1f2937" stroke-width="5" stroke-linejoin="round"/>
+    <text x="590" y="426" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#374151">Terrace</text>
+  </g>
+  <text x="24" y="28" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f766e">GROUND FLOOR</text>
+</svg>

@@ -1,0 +1,62 @@
+# One-command production-like stack: PostgreSQL + FastAPI backend + Next.js frontend.
+#   AUTH_SECRET=$(openssl rand -base64 32) CRON_SECRET=$(openssl rand -hex 16) docker compose up --build
+# Then seed demo data (optional):  docker compose exec api python -m app.cli seed
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: realestate
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-realestate}
+      POSTGRES_DB: realestate
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U realestate"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://realestate:${POSTGRES_PASSWORD:-realestate}@db:5432/realestate
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET}
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-localhost}
+      DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-skyline}
+      ENABLE_SLA_WORKER: "true"
+      ALLOW_TENANT_SWITCH: ${ALLOW_TENANT_SWITCH:-true}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      APP_ENV: production
+    volumes:
+      - uploads:/data/uploads
+
+  web:
+    build:
+      context: .
+      args:
+        API_URL: http://api:8000
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-WebInOrbit Real Estate}
+        NEXT_PUBLIC_TILE_URL: ${NEXT_PUBLIC_TILE_URL:-}
+        NEXT_PUBLIC_ANALYTICS_SRC: ${NEXT_PUBLIC_ANALYTICS_SRC:-}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: http://api:8000
+      ALLOW_TENANT_SWITCH: ${ALLOW_TENANT_SWITCH:-true}
+
+volumes:
+  pgdata:
+  uploads:
