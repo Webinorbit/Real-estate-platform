@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Heart, Menu, Moon, Search, Sun, Phone } from "lucide-react";
+import { Heart, LayoutDashboard, Menu, Moon, Search, Sun, Phone } from "lucide-react";
 import { motion } from "framer-motion";
 import { BrandMark } from "@/components/site/brand";
 import { useTheme } from "@/components/providers";
@@ -110,7 +110,12 @@ export function SiteHeader({ tenant, onOpenSearch }) {
             <button onClick={toggle} className={iconBtn} aria-label="Toggle dark mode">
               {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
             </button>
-            <ButtonLink href="/contact" variant={overlay ? "accent" : "primary"} size="sm" className="ml-1 hidden sm:inline-flex">
+            {tenant.staff && (
+              <ButtonLink href="/admin" variant={overlay ? "glass" : "outline"} size="sm" className="ml-1 hidden md:inline-flex">
+                <LayoutDashboard className="size-4" /> Dashboard
+              </ButtonLink>
+            )}
+            <ButtonLink href="/contact" variant={overlay ? "accent" : "primary"} size="sm" className={cn("hidden sm:inline-flex", !tenant.staff && "ml-1")}>
               <Phone className="size-4" /> Talk to an advisor
             </ButtonLink>
             <button onClick={() => setMenu(true)} className={cn(iconBtn, "lg:hidden")} aria-label="Open menu">
@@ -130,10 +135,15 @@ export function SiteHeader({ tenant, onOpenSearch }) {
           <Link href="/favorites" onClick={() => setMenu(false)} className="rounded-xl px-4 py-3.5 text-lg font-medium hover:bg-muted">
             Favourites
           </Link>
-          <div className="mt-4 px-4">
+          <div className="mt-4 space-y-2 px-4">
             <ButtonLink href="/contact" className="w-full" onClick={() => setMenu(false)}>
               Talk to an advisor
             </ButtonLink>
+            {tenant.staff && (
+              <ButtonLink href="/admin" variant="outline" className="w-full" onClick={() => setMenu(false)}>
+                <LayoutDashboard className="size-4" /> Dashboard
+              </ButtonLink>
+            )}
           </div>
         </nav>
       </Sheet>

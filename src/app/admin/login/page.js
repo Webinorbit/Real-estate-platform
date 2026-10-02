@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { getTenant } from "@/lib/tenant";
 import { heroImages } from "@/lib/utils";
@@ -17,7 +16,6 @@ export default async function LoginPage({ searchParams }) {
   const next = typeof sp.next === "string" && sp.next.startsWith("/admin") ? sp.next : "/admin";
   if (user) redirect(next);
 
-  const { users: demo } = await api("/api/auth/demo-users");
   const bg = heroImages(tenant)[0];
 
   return (
@@ -40,7 +38,7 @@ export default async function LoginPage({ searchParams }) {
           </div>
           <h1 className="font-heading text-3xl font-semibold">Welcome back</h1>
           <p className="mb-8 mt-2 text-muted-foreground">Sign in to the {tenant.name} workspace.</p>
-          <LoginForm next={next} demo={demo} />
+          <LoginForm next={next} />
           <p className="mt-8 text-center text-sm text-muted-foreground">
             <a href="/" className="hover:text-foreground hover:underline">← Back to website</a>
           </p>

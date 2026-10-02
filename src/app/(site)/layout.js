@@ -1,12 +1,23 @@
 import Script from "next/script";
-import { getDemoTenants, getTenant, tenantFeatures } from "@/lib/tenant";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, getCurrentUser } from "@/lib/auth";
+import { getTenant, tenantFeatures } from "@/lib/tenant";
 import { SiteShell } from "@/components/site/site-shell";
 import { SiteFooter } from "@/components/site/site-footer";
 
 export const dynamic = "force-dynamic";
 
+async function isSignedIn() {
+  if (!(await cookies()).get(SESSION_COOKIE)) return false;
+  try {
+    return !!(await getCurrentUser());
+  } catch {
+    return false;
+  }
+}
+
 export default async function SiteLayout({ children }) {
-  const [tenant, demoTenants] = await Promise.all([getTenant(), getDemoTenants()]);
+  const [tenant, staff] = await Promise.all([getTenant(), isSignedIn()]);
   const features = tenantFeatures(tenant);
 
   const publicTenant = {
@@ -18,6 +29,7 @@ export default async function SiteLayout({ children }) {
     currency: tenant.currency,
     locale: tenant.locale,
     toursEnabled: features.tours,
+    staff,
   };
 
   const analyticsSrc = process.env.NEXT_PUBLIC_ANALYTICS_SRC;
@@ -26,7 +38,7 @@ export default async function SiteLayout({ children }) {
     <>
       <SiteShell tenant={publicTenant}>
         {children}
-        <SiteFooter tenant={tenant} features={{ tours: features.tours, removeBranding: features.removeBranding }} demoTenants={demoTenants} />
+        <SiteFooter tenant={tenant} features={{ tours: features.tours }} />
       </SiteShell>
       {tenant.analyticsSiteId && analyticsSrc && (
         <Script src={analyticsSrc} data-site-id={tenant.analyticsSiteId} strategy="afterInteractive" defer />

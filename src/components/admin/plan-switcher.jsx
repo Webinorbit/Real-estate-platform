@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import { changePlan } from "@/app/admin/(panel)/plan/actions";
 import { SegmentedControl } from "@/components/ui/form";
 
-/** Super-admin only: instantly flip a tenant between plans (handy in sales demos). */
+/** Super-admin only: instantly flip a tenant between plans. */
 export function PlanSwitcher({ current }) {
   const [pending, start] = useTransition();
   return (
     <div className={pending ? "opacity-60" : ""}>
-      <p className="mb-1 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Demo: switch plan</p>
+      <p className="mb-1 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Switch plan</p>
       <SegmentedControl
         size="sm"
         value={current}

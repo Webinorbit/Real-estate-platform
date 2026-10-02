@@ -38,9 +38,13 @@ npm run dev:all                 # FastAPI on :8000 + Next.js on :3000  (or run `
 
 API docs (Swagger) are served at http://localhost:8000/api/docs.
 
-### Demo logins
+### Admin login
 
-All passwords are `demo1234`.
+`db:seed` creates a single platform admin (super admin) from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`; it refuses to run without them. No demo owner or broker accounts are created, and the login page shows no demo shortcuts.
+
+### Demo logins (local dev and tests only)
+
+Run the seed with `SEED_DEMO_USERS=true` to also create the demo owner and broker accounts below (the backend test suite needs them; run it against a local database, never a hosted one). All passwords are `demo1234`, and the platform admin becomes `super@webinorbit.demo`.
 
 | Client | Plan | Owner login | Broker login |
 |---|---|---|---|

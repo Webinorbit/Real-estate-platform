@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Response
-from sqlalchemy import or_, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select
 
-from app.config import is_production, tenant_switch_allowed
+from app.config import is_production
 from app.deps import Ctx, authed, public_ctx
 from app.errors import Unauthorized, UserError
 from app.models import User
@@ -53,18 +52,6 @@ def logout(response: Response):
 @router.get("/me")
 def me(ctx=Depends(authed())):
     return {"user": user_json(ctx.user)}
-
-
-@router.get("/demo-users")
-def demo_users(ctx: Ctx = Depends(public_ctx)):
-    """Quick-fill logins for demo deployments only."""
-    if not tenant_switch_allowed():
-        return {"users": []}
-    rows = ctx.db.scalars(
-        select(User).options(joinedload(User.broker)).where(or_(User.tenantId == ctx.tenant.id, User.role == "SUPER")).order_by(User.role.asc(), User.createdAt.asc()).limit(6)
-    ).unique().all()
-    label = lambda u: "Platform admin" if u.role == "SUPER" else "Owner" if u.role == "OWNER" else f"Broker · {u.name.split(' ')[0]}"  # noqa: E731
-    return {"users": [{"email": u.email, "label": label(u)} for u in rows]}
 
 
 @router.get("/context")

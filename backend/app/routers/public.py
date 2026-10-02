@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
-from app.config import env, tenant_switch_allowed
+from app.config import env
 from app.deps import STAFF, Ctx, current_user, public_ctx
 from app.errors import NotFound, UserError
 from app.geo import haversine_km
@@ -42,15 +42,6 @@ def _tour_with_scenes(tour: Tour, scenes: list) -> dict:
 @router.get("/public/tenant")
 def get_tenant(ctx: Ctx = Depends(public_ctx)):
     return {"tenant": public_tenant(ctx.tenant), "features": features_json(ctx.tenant)}
-
-
-@router.get("/public/tenants")
-def get_demo_tenants(ctx: Ctx = Depends(public_ctx)):
-    """Brand switcher for demo deployments only."""
-    if not tenant_switch_allowed():
-        return {"tenants": []}
-    rows = ctx.db.scalars(select(Tenant).where(Tenant.active.is_(True)).order_by(Tenant.createdAt.asc())).all()
-    return {"tenants": [{"slug": t.slug, "name": t.name, "plan": t.plan} for t in rows]}
 
 
 @router.get("/public/home")

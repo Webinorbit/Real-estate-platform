@@ -16,6 +16,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import delete, select
 
+from app.config import env
 from app.cli.demo_data import AMENITY_KITS, BROKERS, LEAD_MESSAGES, LEAD_NAMES, PROPERTIES, TENANTS, TOUR_SCENES
 from app.cli.demo_floorplans import FLOORPLANS, PLAN_H, PLAN_W, room_center
 from app.ids import _base36
@@ -126,11 +127,27 @@ def add(db, model, **fields):
     return obj
 
 
-def wipe(db, password_hash: str) -> None:
+def demo_users_enabled() -> bool:
+    """Demo owner/broker logins (password demo1234) exist only for local dev and the test suite."""
+    return env("SEED_DEMO_USERS") == "true"
+
+
+def admin_account() -> tuple[str, str]:
+    if demo_users_enabled():
+        return "super@webinorbit.demo", PASSWORD
+    email = (env("ADMIN_EMAIL") or "").strip().lower()
+    password = env("ADMIN_PASSWORD")
+    if email and password:
+        return email, password
+    raise SystemExit("Set ADMIN_EMAIL and ADMIN_PASSWORD in .env (the single platform admin), or SEED_DEMO_USERS=true for local demo logins.")
+
+
+def wipe(db) -> None:
     slugs = [t["slug"] for t in TENANTS]
+    email, password = admin_account()
     db.execute(delete(User).where(User.tenantId.is_(None)), execution_options={"synchronize_session": False})
     db.execute(delete(Tenant).where(Tenant.slug.in_(slugs)), execution_options={"synchronize_session": False})
-    add(db, User, email="super@webinorbit.demo", name="WebInOrbit Platform", role="SUPER", passwordHash=password_hash)
+    add(db, User, email=email, name="WebInOrbit Admin", role="SUPER", passwordHash=hash_password(password))
     db.flush()
 
 
@@ -183,17 +200,18 @@ def seed_tenant(db, d: dict, password_hash: str, seed_index: int) -> None:
     tid = tenant.id
     db.flush()
 
-    add(db, User, tenantId=tid, email=d["owner"]["email"], name=d["owner"]["name"], role="OWNER", passwordHash=password_hash)
-
-    broker_users = {
-        b["key"]: add(db, User, tenantId=tid, email=b["email"], name=b["name"], role="BROKER", passwordHash=password_hash)
-        for b in BROKERS[slug]
-    }
+    broker_users = {}
+    if demo_users_enabled():
+        add(db, User, tenantId=tid, email=d["owner"]["email"], name=d["owner"]["name"], role="OWNER", passwordHash=password_hash)
+        broker_users = {
+            b["key"]: add(db, User, tenantId=tid, email=b["email"], name=b["name"], role="BROKER", passwordHash=password_hash)
+            for b in BROKERS[slug]
+        }
     db.flush()
 
     broker_by_key: dict[str, Broker] = {}
     for b in BROKERS[slug]:
-        user = broker_users[b["key"]]
+        user = broker_users.get(b["key"])
         # Omit (rather than set to None) so the column is a real SQL NULL, not a JSON null.
         extra = {"territory": b["territory"]} if b["territory"] else {}
         broker_by_key[b["key"]] = add(
@@ -201,7 +219,7 @@ def seed_tenant(db, d: dict, password_hash: str, seed_index: int) -> None:
             Broker,
             **extra,
             tenantId=tid,
-            userId=user.id,
+            userId=user.id if user else None,
             name=b["name"],
             email=b["email"],
             phone=b["phone"],
@@ -493,7 +511,7 @@ def run(db=None) -> None:
     own = db is None
     db = db or SessionLocal()
     try:
-        wipe(db, password_hash)
+        wipe(db)
         for i, t in enumerate(TENANTS):
             seed_tenant(db, t, password_hash, i)
         db.commit()
@@ -504,7 +522,8 @@ def run(db=None) -> None:
         if own:
             db.close()
 
-    print(f"\nDone. Demo logins (password: {PASSWORD})")
-    for t in TENANTS:
-        print(f"  {t['name'].ljust(16)} {t['owner']['email']}   broker: {BROKERS[t['slug']][0]['email']}")
-    print("  Platform super-admin: super@webinorbit.demo")
+    print(f"\nDone. Platform admin: {admin_account()[0]}")
+    if demo_users_enabled():
+        print(f"Demo logins (password: {PASSWORD})")
+        for t in TENANTS:
+            print(f"  {t['name'].ljust(16)} {t['owner']['email']}   broker: {BROKERS[t['slug']][0]['email']}")

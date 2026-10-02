@@ -2,12 +2,12 @@
 
 import { useActionState, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { loginAction } from "@/app/admin/login/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
 
-export function LoginForm({ next, demo }) {
+export function LoginForm({ next }) {
   const [state, formAction, pending] = useActionState(loginAction, null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,29 +35,6 @@ export function LoginForm({ next, demo }) {
       <Button type="submit" loading={pending} className="w-full" size="lg">
         <LogIn className="size-5" /> Sign in
       </Button>
-
-      {demo?.length > 0 && (
-        <div className="rounded-2xl border border-dashed border-border bg-muted/50 p-4">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Sparkles className="size-3.5 text-accent" /> Demo accounts · password demo1234
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {demo.map((d) => (
-              <button
-                key={d.email}
-                type="button"
-                onClick={() => {
-                  setEmail(d.email);
-                  setPassword("demo1234");
-                }}
-                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium transition hover:border-primary hover:text-primary"
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </form>
   );
 }

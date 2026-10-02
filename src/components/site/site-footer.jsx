@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { BrandMark } from "@/components/site/brand";
 
-export function SiteFooter({ tenant, features, demoTenants }) {
+export function SiteFooter({ tenant, features }) {
   const socials = tenant.socials || {};
   return (
     <footer className="mt-24 border-t border-border bg-card">
@@ -26,6 +26,7 @@ export function SiteFooter({ tenant, features, demoTenants }) {
           <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-muted-foreground">Company</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
             <li><Link className="hover:text-primary" href="/contact">Contact</Link></li>
+            <li><Link className="hover:text-primary" href="/admin">Admin login</Link></li>
             {socials.instagram && <li><a className="hover:text-primary" href={socials.instagram} target="_blank" rel="noopener noreferrer">Instagram</a></li>}
             {socials.facebook && <li><a className="hover:text-primary" href={socials.facebook} target="_blank" rel="noopener noreferrer">Facebook</a></li>}
             {socials.linkedin && <li><a className="hover:text-primary" href={socials.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></li>}
@@ -41,26 +42,12 @@ export function SiteFooter({ tenant, features, demoTenants }) {
         </div>
       </div>
 
-      {demoTenants?.length > 1 && (
-        <div className="border-t border-border bg-muted/50">
-          <div className="mx-auto flex max-w-[90rem] flex-wrap items-center gap-3 px-4 py-3 text-xs sm:px-6">
-            <span className="font-semibold text-muted-foreground">Demo: see the same platform with another client&apos;s brand</span>
-            {demoTenants.map((t) => (
-              <a key={t.slug} href={`/?tenant=${t.slug}`} className={`rounded-full border px-3 py-1 font-medium transition hover:border-primary hover:text-primary ${t.slug === tenant.slug ? "border-primary text-primary" : "border-border"}`}>
-                {t.name} <span className="text-muted-foreground">({t.plan.toLowerCase()})</span>
-              </a>
-            ))}
-            <a href="/admin" className="ml-auto font-semibold text-primary hover:underline">Open admin dashboard →</a>
-          </div>
-        </div>
-      )}
-
       <div className="border-t border-border">
-        <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:px-6">
-          <span>© {new Date().getFullYear()} {tenant.name}. All rights reserved.</span>
-          <a href="https://webinorbit.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground" aria-label="Powered by WebInOrbit">
+        <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <span className="text-xs text-muted-foreground">© {new Date().getFullYear()} {tenant.name}. All rights reserved.</span>
+          <a href="https://webinorbit.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition hover:border-primary" aria-label="Powered by WebInOrbit">
             <span>Powered by</span>
-            <Image src="/brand/webinorbit-logo.png" alt="WebInOrbit" width={480} height={135} className="h-7 w-auto dark:invert" />
+            <Image src="/brand/webinorbit-logo.png" alt="WebInOrbit" width={480} height={135} className="h-9 w-auto dark:invert" />
           </a>
         </div>
       </div>

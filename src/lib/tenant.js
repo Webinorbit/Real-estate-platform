@@ -26,9 +26,6 @@ export async function getTenant() {
   return tenant;
 }
 
-/** Active tenants for the brand switcher; the backend only returns them on demo deployments. */
-export const getDemoTenants = cache(async () => (await api("/api/public/tenants")).tenants);
-
 /** Public origin (scheme + host) the visitor used, for canonical URLs, sitemaps and JSON-LD. */
 export async function getOrigin() {
   const h = await headers();
