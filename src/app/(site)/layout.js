@@ -6,9 +6,8 @@ import { SiteFooter } from "@/components/site/site-footer";
 export const dynamic = "force-dynamic";
 
 export default async function SiteLayout({ children }) {
-  const tenant = await getTenant();
+  const [tenant, demoTenants] = await Promise.all([getTenant(), getDemoTenants()]);
   const features = tenantFeatures(tenant);
-  const demoTenants = await getDemoTenants();
 
   const publicTenant = {
     slug: tenant.slug,

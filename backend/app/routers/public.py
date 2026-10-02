@@ -68,9 +68,17 @@ def get_home(ctx: Ctx = Depends(public_ctx)):
         select(Property, published_tour_exists().label("hasTour")).where(Property.status == "ACTIVE", Property.featured.is_(True)).order_by(Property.createdAt.desc()).limit(8)
     ).all()
 
+    tile_areas = locs[:6]
+    representatives = db.scalars(
+        select(Property).distinct(Property.locality)
+        .where(Property.locality.in_([a["label"] for a in tile_areas]), Property.status == "ACTIVE")
+        .order_by(Property.locality, Property.featured.desc(), Property.createdAt.desc())
+    ).all() if tile_areas else []
+    by_locality = {p.locality: p for p in representatives}
+
     tiles = []
-    for area in localities(db, 6):
-        p = db.scalars(select(Property).where(Property.locality == area["label"], Property.status == "ACTIVE").order_by(Property.featured.desc(), Property.createdAt.desc()).limit(1)).first()
+    for area in tile_areas:
+        p = by_locality.get(area["label"])
         images = p.images if p and isinstance(p.images, list) else []
         tiles.append({**area, "image": (images[0].get("url") if images else None) or "/demo/photos/ext-01.jpg", "city": p.city if p else None})
 

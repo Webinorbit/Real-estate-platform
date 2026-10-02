@@ -114,7 +114,7 @@ export function NeighbourhoodMap({ lat, lng, title }) {
         </div>
         <div className="relative h-[24rem] overflow-hidden rounded-2xl border border-border">
           <div ref={el} data-invert={MAP_STYLES[style].darkInvert ? "true" : "false"} style={{ position: "absolute", inset: 0 }} />
-          <div className="absolute left-3 top-3 z-10 flex rounded-lg bg-card/95 p-0.5 text-xs shadow-soft backdrop-blur">
+          <div className="absolute left-3 top-3 z-10 flex rounded-lg bg-card/95 p-0.5 text-xs shadow-soft">
             {Object.entries(MAP_STYLES).map(([k, s]) => (
               <button key={k} onClick={() => setStyle(k)} aria-pressed={style === k} className={cn("rounded-md px-2.5 py-1.5 font-medium transition-colors", style === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                 {s.label}

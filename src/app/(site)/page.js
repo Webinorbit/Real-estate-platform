@@ -73,7 +73,7 @@ export default async function HomePage() {
                       <h3 className="font-heading text-2xl font-semibold">{t.label}</h3>
                       <p className="text-sm text-white/80">{t.count} homes{t.city ? ` · ${t.city}` : ""}</p>
                     </div>
-                    <span className="grid size-10 place-items-center rounded-full bg-white/20 backdrop-blur transition group-hover:bg-accent group-hover:text-accent-foreground">
+                    <span className="grid size-10 place-items-center rounded-full bg-white/25 transition group-hover:bg-accent group-hover:text-accent-foreground">
                       <ArrowRight className="size-5" />
                     </span>
                   </div>
@@ -93,7 +93,7 @@ export default async function HomePage() {
               fill
               sizes="100vw"
               className="-z-10 object-cover opacity-60"
-              style={{ animation: "kenburns 24s ease-in-out infinite alternate" }}
+              style={{ animation: "kenburns 24s ease-in-out infinite alternate", willChange: "transform" }}
             />
             <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/85 via-black/55 to-transparent" />
             <div className="grid gap-10 p-8 sm:p-14 lg:grid-cols-[1.1fr_1fr] lg:items-center">
@@ -116,7 +116,7 @@ export default async function HomePage() {
               </div>
               <div className="grid gap-3">
                 {tours.map((t) => (
-                  <Link key={t.id} href={`/tour/${t.id}`} className="group flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur transition hover:bg-white/20">
+                  <Link key={t.id} href={`/tour/${t.id}`} className="group flex items-center gap-4 rounded-2xl border border-white/15 bg-black/30 p-3 transition hover:bg-white/20">
                     <div className="relative size-16 shrink-0 overflow-hidden rounded-xl">
                       <Image src={t.property.images?.[0]?.url || "/demo/photos/ext-01.jpg"} alt="" fill sizes="64px" className="object-cover" />
                     </div>

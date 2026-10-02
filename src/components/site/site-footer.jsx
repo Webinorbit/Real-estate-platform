@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { BrandMark } from "@/components/site/brand";
@@ -57,11 +58,10 @@ export function SiteFooter({ tenant, features, demoTenants }) {
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:px-6">
           <span>© {new Date().getFullYear()} {tenant.name}. All rights reserved.</span>
-          {!features.removeBranding && (
-            <a href="https://webinorbit.com/products" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-              Powered by WebInOrbit Real Estate
-            </a>
-          )}
+          <a href="https://webinorbit.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground" aria-label="Powered by WebInOrbit">
+            <span>Powered by</span>
+            <Image src="/brand/webinorbit-logo.png" alt="WebInOrbit" width={480} height={135} className="h-7 w-auto dark:invert" />
+          </a>
         </div>
       </div>
     </footer>

@@ -187,7 +187,7 @@ export function FilterBar({ filters, onChange, onReset, localities, prices, curr
   if (filters.near) chips.push({ key: "near", label: `Within ${filters.near[2]} km`, clear: { near: null } });
 
   return (
-    <div className="border-b border-border bg-background/95 backdrop-blur">
+    <div className="border-b border-border bg-background">
       <div className="scrollbar-none flex items-center gap-2.5 overflow-x-auto px-4 py-3 sm:px-6">
         <SegmentedControl
           options={[{ value: "SALE", label: "Buy" }, { value: "RENT", label: "Rent" }]}

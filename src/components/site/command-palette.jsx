@@ -18,17 +18,6 @@ export function CommandPalette({ open, onOpenChange, tenant }) {
   const [data, setData] = useState({ localities: [], properties: [] });
 
   useEffect(() => {
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        onOpenChange(!open);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
-
-  useEffect(() => {
     if (!open) return;
     const ctrl = new AbortController();
     const t = setTimeout(() => {

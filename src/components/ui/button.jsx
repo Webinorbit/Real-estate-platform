@@ -13,7 +13,7 @@ const variants = {
   secondary: "bg-muted text-foreground hover:bg-border",
   outline: "border border-input bg-card/60 text-foreground hover:bg-muted hover:border-foreground/30",
   ghost: "text-foreground hover:bg-muted",
-  glass: "bg-white/15 text-white backdrop-blur-md border border-white/25 hover:bg-white/25",
+  glass: "bg-white/20 text-white border border-white/25 hover:bg-white/25",
   danger: "bg-danger text-white hover:brightness-110",
   link: "text-primary underline-offset-4 hover:underline px-0",
 };

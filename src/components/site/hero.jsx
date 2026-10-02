@@ -90,7 +90,7 @@ export function Hero({ tenant, images, localities, stats }) {
       <div className="absolute inset-0 -z-10 bg-black">
         <AnimatePresence initial={false}>
           <motion.div key={slide} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.6 }}>
-            <Image src={images[slide]} alt="" fill priority={slide === 0} sizes="100vw" className="object-cover" style={{ animation: "kenburns 14s ease-out forwards" }} />
+            <Image src={images[slide]} alt="" fill priority={slide === 0} sizes="100vw" className="object-cover" style={{ animation: "kenburns 14s ease-out forwards", willChange: "transform" }} />
           </motion.div>
         </AnimatePresence>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/35 to-black/80" />
@@ -99,7 +99,7 @@ export function Hero({ tenant, images, localities, stats }) {
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-32 sm:px-6">
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1 }} className="text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-medium backdrop-blur">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/25 px-4 py-1.5 text-sm font-medium">
             <Sparkles className="size-4 text-accent" /> Map search · 360° tours · Matched advisors
           </span>
           <h1 className="mx-auto mt-6 max-w-4xl text-balance font-heading text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl">
@@ -115,7 +115,7 @@ export function Hero({ tenant, images, localities, stats }) {
           initial={{ opacity: 0, y: 36 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="relative z-10 mx-auto mt-10 max-w-5xl rounded-3xl border border-white/20 bg-white/90 p-3 text-foreground shadow-lift backdrop-blur-xl dark:bg-card/90"
+          className="relative z-10 mx-auto mt-10 max-w-5xl rounded-3xl border border-white/20 bg-white/95 p-3 text-foreground shadow-lift dark:bg-card/95"
           role="search"
         >
           <div className="mb-3 flex gap-1 px-1">

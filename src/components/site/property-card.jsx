@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bath, BedDouble, ChevronLeft, ChevronRight, GitCompare, Heart, Maximize2, View } from "lucide-react";
 import { useVisitor } from "@/components/site/stores";
@@ -24,7 +24,7 @@ export function HeartButton({ id, title, className, size = "md" }) {
         v?.toggleFavorite(id, title);
       }}
       className={cn(
-        "relative grid place-items-center rounded-full bg-white/90 text-black shadow-soft backdrop-blur transition-transform hover:scale-110 active:scale-90",
+        "relative grid place-items-center rounded-full bg-white/90 text-black shadow-soft transition-transform hover:scale-110 active:scale-90",
         size === "lg" ? "size-12" : "size-9",
         className,
       )}
@@ -48,7 +48,7 @@ export function HeartButton({ id, title, className, size = "md" }) {
   );
 }
 
-export function PropertyCard({ p, tenant, active, onHover, priority, compact, className }) {
+export const PropertyCard = memo(function PropertyCard({ p, tenant, active, onHover, priority, compact, className }) {
   const v = useVisitor();
   const [idx, setIdx] = useState(0);
   const images = p.images?.length ? p.images : [{ url: "/demo/photos/ext-01.jpg", alt: p.title }];
@@ -62,7 +62,6 @@ export function PropertyCard({ p, tenant, active, onHover, priority, compact, cl
 
   return (
     <motion.article
-      layout="position"
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
@@ -117,7 +116,7 @@ export function PropertyCard({ p, tenant, active, onHover, priority, compact, cl
             </>
           )}
 
-          <div className="absolute bottom-3 left-3 rounded-xl bg-black/55 px-3 py-1.5 text-white backdrop-blur">
+          <div className="absolute bottom-3 left-3 rounded-xl bg-black/65 px-3 py-1.5 text-white">
             <span className="font-heading text-lg font-semibold">{formatPrice(p.price, { currency: tenant.currency, listingType: p.listingType, priceUnit: p.priceUnit })}</span>
           </div>
         </div>
@@ -150,7 +149,7 @@ export function PropertyCard({ p, tenant, active, onHover, priority, compact, cl
             v?.toggleCompare(p.id);
           }}
           className={cn(
-            "grid size-9 place-items-center rounded-full shadow-soft backdrop-blur transition-all hover:scale-110 active:scale-90 max-md:hidden",
+            "grid size-9 place-items-center rounded-full shadow-soft transition-all hover:scale-110 active:scale-90 max-md:hidden",
             compared ? "bg-primary text-primary-foreground" : "bg-white/90 text-black opacity-0 group-hover:opacity-100",
           )}
         >
@@ -159,7 +158,7 @@ export function PropertyCard({ p, tenant, active, onHover, priority, compact, cl
       </div>
     </motion.article>
   );
-}
+});
 
 export function PropertyCardSkeleton() {
   return (

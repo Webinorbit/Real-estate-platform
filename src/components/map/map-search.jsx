@@ -618,17 +618,17 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
 
           {/* top controls */}
           <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-wrap items-start justify-between gap-2 px-3">
-            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card/95 py-1.5 pl-4 pr-2 shadow-soft backdrop-blur">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card/95 py-1.5 pl-4 pr-2 shadow-soft">
               <label htmlFor="sam" className="cursor-pointer text-xs font-semibold">Search as I move the map</label>
               <Switch id="sam" checked={searchAsMove} onCheckedChange={(v) => { setSearchAsMove(v); if (!v) { filtersRef.current = { ...filtersRef.current, bbox: null }; update({ bbox: null }); } }} label="Search as I move the map" hideLabel />
             </div>
 
             <div className="pointer-events-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" className={cn("rounded-full bg-card/95 shadow-soft backdrop-blur", drawing && "border-primary bg-primary text-primary-foreground hover:bg-primary")} onClick={() => { if (!drawing && filtersRef.current.poly) update({ poly: null }); setDrawing((d) => !d); }} aria-pressed={drawing}>
+              <Button variant="outline" size="sm" className={cn("rounded-full bg-card/95 shadow-soft", drawing && "border-primary bg-primary text-primary-foreground hover:bg-primary")} onClick={() => { if (!drawing && filtersRef.current.poly) update({ poly: null }); setDrawing((d) => !d); }} aria-pressed={drawing}>
                 <PenLine className="size-4" /> {drawing ? "Cancel drawing" : "Draw area"}
               </Button>
               <div className="relative">
-                <Button variant="outline" size="sm" className={cn("rounded-full bg-card/95 shadow-soft backdrop-blur", filters.near && "border-primary text-primary")} onClick={() => setNearOpen((o) => !o)}>
+                <Button variant="outline" size="sm" className={cn("rounded-full bg-card/95 shadow-soft", filters.near && "border-primary text-primary")} onClick={() => setNearOpen((o) => !o)}>
                   <Crosshair className="size-4" /> Near me
                 </Button>
                 <AnimatePresence>
@@ -678,15 +678,15 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
               )}
             </AnimatePresence>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="rounded-full bg-card/95 shadow-soft backdrop-blur" onClick={() => setStyleMenu((o) => !o)} aria-expanded={styleMenu}>
+              <Button variant="outline" size="sm" className="rounded-full bg-card/95 shadow-soft" onClick={() => setStyleMenu((o) => !o)} aria-expanded={styleMenu}>
                 <Layers className="size-4" /> {MAP_STYLES[mapStyle].label}
               </Button>
-              <Button variant="outline" size="sm" className={cn("rounded-full bg-card/95 shadow-soft backdrop-blur", heat && "border-primary bg-primary text-primary-foreground hover:bg-primary")} onClick={() => setHeat((h) => !h)} aria-pressed={heat}>
+              <Button variant="outline" size="sm" className={cn("rounded-full bg-card/95 shadow-soft", heat && "border-primary bg-primary text-primary-foreground hover:bg-primary")} onClick={() => setHeat((h) => !h)} aria-pressed={heat}>
                 <Flame className="size-4" /> Price heatmap
               </Button>
             </div>
             {heat && (
-              <div className="rounded-xl border border-border bg-card/95 px-3 py-2 shadow-soft backdrop-blur">
+              <div className="rounded-xl border border-border bg-card/95 px-3 py-2 shadow-soft">
                 <div className="h-2 w-40 rounded-full" style={{ background: "linear-gradient(90deg,#38bdf8,#a3e635,#fbbf24,#ef4444)" }} />
                 <div className="mt-1 flex justify-between text-[10px] font-semibold text-muted-foreground"><span>Lower price / {tenant.areaUnit}</span><span>Higher</span></div>
               </div>

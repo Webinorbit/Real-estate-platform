@@ -17,8 +17,8 @@ const badgeTones = {
   success: "bg-success/15 text-success",
   warning: "bg-warning/15 text-warning",
   danger: "bg-danger/15 text-danger",
-  dark: "bg-black/60 text-white backdrop-blur",
-  light: "bg-white/90 text-black backdrop-blur",
+  dark: "bg-black/65 text-white",
+  light: "bg-white/90 text-black",
 };
 
 export function Badge({ tone = "neutral", className, children, ...props }) {
