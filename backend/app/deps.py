@@ -1,5 +1,6 @@
 """Request context: who is the tenant (from the host), who is the user (from the session cookie)."""
 
+import time
 from dataclasses import dataclass
 from typing import Callable, Iterable
 
@@ -7,6 +8,7 @@ from fastapi import Depends, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app import cache
 from app.config import ROOT_DOMAIN, tenant_switch_allowed, env
 from app.db import bind_tenant, get_db
 from app.errors import Forbidden, NotFound, PlanLocked, Unauthorized
@@ -69,8 +71,30 @@ class Ctx:
     tenant: Tenant
 
 
+_TENANT_TTL = 20.0
+_tenant_cache: dict[tuple, tuple[float, Tenant]] = {}
+
+
+def _tenant_cache_key(request: Request) -> tuple | None:
+    """Public reads may reuse the resolved tenant for a few seconds; admin and auth calls always hit the database."""
+    if request.method != "GET" or request.url.path.startswith(("/api/admin", "/api/auth")):
+        return None
+    override = request.cookies.get(TENANT_COOKIE) if tenant_switch_allowed() else None
+    return (request.headers.get("x-tenant-host") or request.headers.get("host"), override)
+
+
 def public_ctx(request: Request, db: Session = Depends(get_db)) -> Ctx:
-    tenant = resolve_tenant(db, request)
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        _tenant_cache.clear()
+        cache.clear()
+    key = _tenant_cache_key(request)
+    hit = _tenant_cache.get(key) if key else None
+    if hit and hit[0] > time.monotonic():
+        tenant = db.merge(hit[1], load=False)
+    else:
+        tenant = resolve_tenant(db, request)
+        if tenant is not None and key:
+            _tenant_cache[key] = (time.monotonic() + _TENANT_TTL, tenant)
     if tenant is None:
         raise NotFound("No site is configured for this address")
     bind_tenant(db, tenant.id)

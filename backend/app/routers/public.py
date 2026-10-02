@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
+from app import cache
 from app.config import env
 from app.deps import STAFF, Ctx, current_user, public_ctx
 from app.errors import NotFound, UserError
@@ -29,6 +30,7 @@ log = logging.getLogger("public")
 router = APIRouter(prefix="/api")
 
 NO_STORE = {"Cache-Control": "private, max-age=0, must-revalidate"}
+PUBLIC_TTL = 30.0
 
 
 def public_tenant(tenant: Tenant) -> dict:
@@ -46,13 +48,20 @@ def get_tenant(ctx: Ctx = Depends(public_ctx)):
 
 @router.get("/public/home")
 def get_home(ctx: Ctx = Depends(public_ctx)):
+    return cache.get_or_set((ctx.tenant.id, "home"), PUBLIC_TTL, lambda: _build_home(ctx))
+
+
+def _build_home(ctx: Ctx) -> dict:
     db, tenant = ctx.db, ctx.tenant
-    stats = {
-        "properties": db.scalar(select(func.count(Property.id)).where(Property.status == "ACTIVE")),
-        "brokers": db.scalar(select(func.count(Broker.id)).where(Broker.active.is_(True))),
-        "tours": db.scalar(select(func.count(Tour.id)).where(Tour.published.is_(True))),
-        "cities": db.scalar(select(func.count(func.distinct(Property.city))).where(Property.status == "ACTIVE")),
-    }
+    n_properties, n_brokers, n_tours, n_cities = db.execute(
+        select(
+            select(func.count(Property.id)).where(Property.status == "ACTIVE").scalar_subquery(),
+            select(func.count(Broker.id)).where(Broker.active.is_(True)).scalar_subquery(),
+            select(func.count(Tour.id)).where(Tour.published.is_(True)).scalar_subquery(),
+            select(func.count(func.distinct(Property.city))).where(Property.status == "ACTIVE").scalar_subquery(),
+        )
+    ).one()
+    stats = {"properties": n_properties, "brokers": n_brokers, "tours": n_tours, "cities": n_cities}
     locs = localities(db, 10)
 
     featured_rows = db.execute(
@@ -145,6 +154,10 @@ def compare(ids: str = "", ctx: Ctx = Depends(public_ctx)):
 
 @router.get("/public/brokers")
 def brokers(ctx: Ctx = Depends(public_ctx)):
+    return cache.get_or_set((ctx.tenant.id, "brokers"), PUBLIC_TTL, lambda: _build_brokers(ctx))
+
+
+def _build_brokers(ctx: Ctx) -> dict:
     db = ctx.db
     rows = db.scalars(select(Broker).where(Broker.active.is_(True)).order_by(Broker.weight.desc(), Broker.name.asc())).all()
     counts = db.execute(
