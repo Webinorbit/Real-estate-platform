@@ -19,12 +19,12 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    command: ["npx", "next", "start", "-H", "127.0.0.1", "-p", "3007"]
     environment:
       # Browsers call same-origin /api/*; the Next server forwards to the API over loopback.
       # Must match the API_URL build-arg in the workflow (rewrites are baked at build time).
       API_URL: http://127.0.0.1:8000
       ALLOW_TENANT_SWITCH: "false"
-      PORT: "3000"
 
 volumes:
   uploads:

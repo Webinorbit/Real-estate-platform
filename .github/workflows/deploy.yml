@@ -128,12 +128,12 @@ jobs:
             # Smoke: web must answer over loopback with *any* HTTP code (tenant-less 404/500 is acceptable).
             code=""
             for i in $(seq 1 30); do
-              code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || echo 000)
+              code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3007/ || echo 000)
               [ "$code" != "000" ] && break
               sleep 2
             done
             if [ "$code" = "000" ]; then
-              echo "web container is not answering on 127.0.0.1:3000"
+              echo "web container is not answering on 127.0.0.1:3007"
               docker ps --format 'table {{.Names}}\t{{.Status}}'
               docker compose -f docker-compose.prod.yml logs --tail=50 web api
               exit 1
