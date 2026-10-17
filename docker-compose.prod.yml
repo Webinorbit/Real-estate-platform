@@ -1,0 +1,30 @@
+# Production runtime for the VPS.
+services:
+  api:
+    image: ${API_IMAGE:-ghcr.io/webinorbit/real-estate-api:latest}
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - uploads:/data/uploads
+    # Same startup chain as backend/Dockerfile, but binds to loopback only.
+    command:
+      - sh
+      - -c
+      - python -m app.cli migrate && uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips='*'
+
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/webinorbit/real-estate-web:latest}
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Browsers call same-origin /api/*; the Next server forwards to the API over loopback.
+      # Must match the API_URL build-arg in the workflow (rewrites are baked at build time).
+      API_URL: http://127.0.0.1:8000
+      ALLOW_TENANT_SWITCH: "false"
+      PORT: "3000"
+
+volumes:
+  uploads:

@@ -1,0 +1,141 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  API_IMAGE: ghcr.io/webinorbit/real-estate-api
+  WEB_IMAGE: ghcr.io/webinorbit/real-estate-web
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+            ${{ env.API_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: |
+            API_URL=http://127.0.0.1:8000
+            NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
+            NEXT_PUBLIC_TILE_URL=${{ vars.NEXT_PUBLIC_TILE_URL }}
+            NEXT_PUBLIC_ANALYTICS_SRC=${{ vars.NEXT_PUBLIC_ANALYTICS_SRC }}
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+            ${{ env.WEB_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Only needed so docker-compose.prod.yml is available for the scp step.
+          sparse-checkout: docker-compose.prod.yml
+
+      - name: Copy compose file to VPS
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/realestate/"
+          overwrite: true
+          strip_components: 0
+
+      - name: Render .env and roll out
+        uses: appleboy/ssh-action@v1
+        env:
+          DB_USER: ${{ vars.DB_USER }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          ROOT_DOMAIN: ${{ vars.ROOT_DOMAIN }}
+          DEFAULT_TENANT_SLUG: ${{ vars.DEFAULT_TENANT_SLUG }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: DB_USER,DB_NAME,DB_PASSWORD,AUTH_SECRET,CRON_SECRET,ROOT_DOMAIN,DEFAULT_TENANT_SLUG
+          script: |
+            set -e
+            cd /opt/realestate
+
+            # Percent-encode the DB password so DATABASE_URL stays a valid URL
+            # (% first, then URL-reserved characters).
+            PW="${DB_PASSWORD//%/%25}"
+            PW="${PW//\//%2F}"
+            PW="${PW//:/%3A}"
+            PW="${PW//@/%40}"
+            PW="${PW//\?/%3F}"
+            PW="${PW//#/%23}"
+            PW="${PW//&/%26}"
+            PW="${PW//=/%3D}"
+
+            # printf (not a heredoc) so no shell expansion surprises inside secret values.
+            printf 'APP_ENV=production\nALLOW_TENANT_SWITCH=false\nSTORAGE_DRIVER=local\nAUTH_SECRET=%s\nCRON_SECRET=%s\nROOT_DOMAIN=%s\nDEFAULT_TENANT_SLUG=%s\nDATABASE_URL=postgresql://%s:%s@127.0.0.1:5432/%s\n' \
+              "$AUTH_SECRET" "$CRON_SECRET" "$ROOT_DOMAIN" "$DEFAULT_TENANT_SLUG" "$DB_USER" "$PW" "$DB_NAME" > .env
+            chmod 600 .env
+
+            # Pin this run's images (overrides the :latest defaults in the compose file).
+            export API_IMAGE=${{ env.API_IMAGE }}:${{ github.sha }}
+            export WEB_IMAGE=${{ env.WEB_IMAGE }}:${{ github.sha }}
+
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+
+            # Smoke: web must answer over loopback with *any* HTTP code (tenant-less 404/500 is acceptable).
+            code=""
+            for i in $(seq 1 30); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || echo 000)
+              [ "$code" != "000" ] && break
+              sleep 2
+            done
+            if [ "$code" = "000" ]; then
+              echo "web container is not answering on 127.0.0.1:3000"
+              docker ps --format 'table {{.Names}}\t{{.Status}}'
+              docker compose -f docker-compose.prod.yml logs --tail=50 web api
+              exit 1
+            fi
+            echo "web answering (HTTP $code)"
