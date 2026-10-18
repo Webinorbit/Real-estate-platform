@@ -1,4 +1,4 @@
-# WebInOrbit Real Estate Dynamic Platform
+# Nivasto — Real Estate Platform by WebInOrbit
 
 A multi-tenant, white-label real estate SaaS. One deployment serves many clients, each with its own domain, brand, listings, team and leads.
 
@@ -48,7 +48,7 @@ Run the seed with `SEED_DEMO_USERS=true` to also create the demo owner and broke
 
 | Client | Plan | Owner login | Broker login |
 |---|---|---|---|
-| Skyline Realty (Mumbai, luxury) | Enterprise | `owner@skyline.demo` | `priya@skyline.demo` |
+| Nivasto (Mumbai, luxury) | Enterprise | `owner@skyline.demo` | `priya@skyline.demo` |
 | Heritage Homes (Bengaluru) | Pro | `owner@heritage.demo` | `kavya@heritage.demo` |
 | Urban Nest (rentals) | Starter | `owner@urbannest.demo` | `simran@urbannest.demo` |
 | WebInOrbit staff | Super admin | `super@webinorbit.demo` | |

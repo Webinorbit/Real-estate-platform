@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   ArrowUpDown, Crosshair, Flame, GripVertical, Layers, List, Loader2, Map as MapIcon, PenLine, RefreshCw, SearchX, Trash2, X,
 } from "lucide-react";
+import { BrandLoader } from "@/components/brand-loader";
 import { FilterBar } from "@/components/map/filter-bar";
 import { MAP_STYLES, buildStyle } from "@/components/map/map-styles";
 import { createCluster, createPill, popupHtml, setPillState } from "@/components/map/markers";
@@ -608,7 +609,7 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
         <section className={cn("relative min-h-0 flex-1 max-lg:w-full", mobileView === "map" ? "block" : "hidden lg:block")} aria-label="Map">
           <div ref={mapEl} data-invert={MAP_STYLES[mapStyle].darkInvert ? "true" : "false"} className="bg-muted" style={{ position: "absolute", inset: 0 }} />
 
-          {!ready && <div className="skeleton absolute inset-0 grid place-items-center"><MapIcon className="size-10 animate-pulse text-muted-foreground" /></div>}
+          {!ready && <BrandLoader inline label="Loading map" className="z-10" />}
 
           {loading && (
             <div className="absolute inset-x-0 top-0 z-10 h-1 bg-primary/15" role="progressbar" aria-label="Loading results">

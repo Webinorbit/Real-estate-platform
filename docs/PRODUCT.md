@@ -1,6 +1,6 @@
-# Real Estate Dynamic Platform — product page copy and sheet
+# Nivasto — product page copy and sheet
 
-Copy for the WebInOrbit Products page (replaces the "In Development" Real Estate entry) plus an internal pricing and feature sheet.
+Copy for the WebInOrbit Products page for **Nivasto**, the real estate platform (replaces the "In Development" Real Estate entry) plus an internal pricing and feature sheet.
 
 ---
 
@@ -8,7 +8,13 @@ Copy for the WebInOrbit Products page (replaces the "In Development" Real Estate
 
 **Status:** Available
 
-**Name:** Real Estate Dynamic Platform
+**Name:** Nivasto
+
+**Subtitle / category:** Real Estate Platform
+
+**Logo:** `public/brand/nivasto-mark.svg` (square icon: a home inside a map pin circled by a gold orbit ring; home = the name *niwas*, pin = map search, ring = 360° virtual tours and the WebInOrbit orbit) and `public/brand/nivasto-logo.svg` (icon + wordmark). Colours: deep teal `#0f3d3e` with gold `#d4a64a`, the same as the demo site.
+
+**Name meaning:** From *niwas* (residence, home) with a global-sounding ending. Feels familiar to Indian clients and reads as an international brand abroad: ni-VAS-to. Domains nivasto.com, nivasto.in and nivasto.co were unregistered when the name was chosen.
 
 **One-liner:** Your own branded property portal with map search, 360° virtual tours and smart lead routing, live in days instead of months.
 

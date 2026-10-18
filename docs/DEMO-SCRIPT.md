@@ -2,7 +2,7 @@
 
 Setup: `npm run db:reset`, `npm run dev`, then use Chrome at full-screen. Passwords are `demo1234`. Keep two windows: the public site and `/admin`.
 
-## 1. The buyer's view (4 min) — Skyline Realty, `/`
+## 1. The buyer's view (4 min) — Nivasto, `/`
 
 1. **Hero** — "This is a fully branded site for one client. Everything you see is theirs: logo, colours, fonts, imagery."
 2. **Search** — go to **Search**. Drag the map: the list updates live. Click a cluster to zoom. Hover a card to highlight its pin.

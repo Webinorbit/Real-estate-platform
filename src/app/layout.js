@@ -33,7 +33,7 @@ export default async function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-dvh antialiased">
-        <Providers>{children}</Providers>
+        <Providers brand={{ name: tenant?.name || process.env.NEXT_PUBLIC_APP_NAME || "", logoUrl: tenant?.logoUrl || null }}>{children}</Providers>
       </body>
     </html>
   );

@@ -125,7 +125,7 @@ export function SiteHeader({ tenant, onOpenSearch }) {
         </div>
       </motion.header>
 
-      <Sheet open={menu} onOpenChange={setMenu} side="left" title={tenant.name}>
+      <Sheet open={menu} onOpenChange={setMenu} side="left" title={<BrandMark name={tenant.name} logoUrl={tenant.logoUrl} href={null} />}>
         <nav className="flex flex-col p-3" aria-label="Mobile">
           {links.map((l) => (
             <Link key={l.label} href={l.href} onClick={() => setMenu(false)} className="rounded-xl px-4 py-3.5 text-lg font-medium hover:bg-muted">

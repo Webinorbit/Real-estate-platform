@@ -134,15 +134,15 @@ export function MiniMap({ tour, current, onSelect, viewer }) {
   if (!hasPlan && !hasGeo) return null;
 
   return (
-    <div className="w-[min(17rem,70vw)] rounded-2xl border border-white/15 bg-black/55 p-2 text-white shadow-lift backdrop-blur-md">
+    <div className="w-[min(17rem,52vw)] rounded-2xl sm:w-[min(17rem,70vw)] border border-white/15 bg-black/55 p-2 text-white shadow-lift backdrop-blur-md">
       {hasPlan && hasGeo && (
         <div className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-white/10 p-0.5 text-xs font-medium" role="tablist" aria-label="Map type">
           {[
             ["plan", "Floor plan", LayoutPanelTop],
             ["map", "Map", MapIcon],
           ].map(([key, label, Icon]) => (
-            <button key={key} role="tab" aria-selected={mode === key} onClick={() => setMode(key)} className={cn("flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 transition-colors", mode === key ? "bg-white text-black" : "text-white/75 hover:text-white")}>
-              <Icon className="size-3.5" /> {label}
+            <button key={key} role="tab" aria-selected={mode === key} onClick={() => setMode(key)} className={cn("flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-1 py-1.5 transition-colors sm:gap-1.5 sm:px-2", mode === key ? "bg-white text-black" : "text-white/75 hover:text-white")}>
+              <Icon className="hidden size-3.5 min-[360px]:block" /> {label}
             </button>
           ))}
         </div>

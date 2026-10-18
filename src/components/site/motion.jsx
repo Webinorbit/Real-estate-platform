@@ -92,3 +92,29 @@ export function SectionHeading({ eyebrow, title, description, action, className 
     </Reveal>
   );
 }
+
+/** Card with a border glow that follows the cursor. */
+export function GlowCard({ children, className, innerClassName }) {
+  const onMove = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+  };
+  return (
+    <div onMouseMove={onMove} className={cn("glow-card rounded-3xl border border-border", className)}>
+      <div className={cn("glow-inner", innerClassName)}>{children}</div>
+    </div>
+  );
+}
+
+/** Infinite horizontal ticker; children are rendered twice for a seamless loop. */
+export function Marquee({ children, className }) {
+  return (
+    <div className={cn("marquee overflow-hidden", className)}>
+      <div className="marquee-track">
+        <div className="flex shrink-0 items-center">{children}</div>
+        <div className="flex shrink-0 items-center" aria-hidden>{children}</div>
+      </div>
+    </div>
+  );
+}

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Crosshair, MapPin, Search, Sparkles } from "lucide-react";
+import { BadgeCheck, Crosshair, MapPin, Search, View, Zap, ShieldCheck, Timer } from "lucide-react";
 import { Select } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { PROPERTY_TYPES } from "@/lib/constants";
@@ -39,6 +39,8 @@ export function Hero({ tenant, images, localities, stats }) {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, []);
+
+  const words = (tenant.tagline || "Find a home you will love").split(/\s+/);
 
   const suggestions = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -100,10 +102,21 @@ export function Hero({ tenant, images, localities, stats }) {
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-32 sm:px-6">
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1 }} className="text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/25 px-4 py-1.5 text-sm font-medium">
-            <Sparkles className="size-4 text-accent" /> Map search · 360° tours · Matched advisors
+            Map search · 360° tours · Matched advisors
           </span>
-          <h1 className="mx-auto mt-6 max-w-4xl text-balance font-heading text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl">
-            {tenant.tagline || `Find a home you will love`}
+          <h1 className="mx-auto mt-6 max-w-4xl text-balance font-heading text-5xl font-semibold leading-[1.05] drop-shadow-[0_4px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-[5.25rem]">
+            {words.map((w, i) => (
+              <motion.span
+                key={i}
+                className={cn("inline-block", i >= words.length - 2 && "text-sheen")}
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.15 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {w}
+                {i < words.length - 1 && "\u00a0"}
+              </motion.span>
+            ))}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-balance text-lg text-white/85">
             Explore {stats.properties}+ verified listings on the map, walk through them in 360°, and get matched with the advisor who knows the neighbourhood best.
@@ -115,7 +128,7 @@ export function Hero({ tenant, images, localities, stats }) {
           initial={{ opacity: 0, y: 36 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="relative z-10 mx-auto mt-10 max-w-5xl rounded-3xl border border-white/20 bg-white/95 p-3 text-foreground shadow-lift dark:bg-card/95"
+          className="relative z-10 mx-auto mt-10 max-w-5xl rounded-[1.75rem] border border-white/25 bg-white/95 p-3 text-foreground shadow-[0_30px_80px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/10 dark:bg-card/95"
           role="search"
         >
           <div className="mb-3 flex gap-1 px-1">
@@ -224,16 +237,60 @@ export function Hero({ tenant, images, localities, stats }) {
           </div>
         </motion.form>
 
+        <motion.ul
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 0.6 }}
+          className="mx-auto mt-7 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/85"
+        >
+          {[
+            [ShieldCheck, "Verified listings"],
+            [View, "Real 360° walkthroughs"],
+            [Timer, "Advisor replies in minutes"],
+          ].map(([Icon, label]) => (
+            <li key={label} className="flex items-center gap-2">
+              <Icon className="size-4 text-accent" /> {label}
+            </li>
+          ))}
+        </motion.ul>
+
         <motion.a
           href="#featured"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="mx-auto mt-10 flex w-fit items-center gap-2 text-sm font-medium text-white/80 hover:text-white"
+          transition={{ delay: 1.4 }}
+          className="mx-auto mt-10 hidden w-fit flex-col items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-white/70 hover:text-white sm:flex"
+          aria-label="See featured homes"
         >
-          See featured homes <ArrowRight className="size-4 rotate-90" />
+          <span className="scroll-mouse"><span /></span>
+          Scroll
         </motion.a>
       </div>
+
+      <FloatingCard className="left-[3%] top-[30%]" delay={1.1} float="0s">
+        <span className="grid size-10 place-items-center rounded-xl bg-success text-white"><Zap className="size-5" /></span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">New enquiry</p>
+          <p className="text-sm font-semibold">Matched to an advisor</p>
+          <p className="text-xs text-white/70">in 42 seconds</p>
+        </div>
+      </FloatingCard>
+      <FloatingCard className="right-[3%] top-[24%]" delay={1.3} float="-2s">
+        <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground"><View className="size-5" /></span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">Live now</p>
+          <p className="text-sm font-semibold">{stats.tours} immersive tours</p>
+          <p className="flex items-center gap-1 text-xs text-white/70"><span className="size-1.5 animate-pulse rounded-full bg-success" /> walk through from anywhere</p>
+        </div>
+      </FloatingCard>
+      <FloatingCard className="right-[4.5%] top-[44%]" delay={1.5} float="-4s">
+        <span className="grid size-10 place-items-center rounded-xl bg-white text-black"><BadgeCheck className="size-5" /></span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">Curated</p>
+          <p className="text-sm font-semibold">{stats.properties}+ verified homes</p>
+          <p className="text-xs text-white/70">across {stats.cities} {stats.cities === 1 ? "city" : "cities"}</p>
+        </div>
+      </FloatingCard>
 
       {images.length > 1 && (
         <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2" aria-hidden>
@@ -243,5 +300,21 @@ export function Hero({ tenant, images, localities, stats }) {
         </div>
       )}
     </section>
+  );
+}
+
+function FloatingCard({ children, className, delay, float }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ delay, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      className={cn("pointer-events-none absolute z-0 hidden w-60 xl:block", className)}
+      aria-hidden
+    >
+      <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-black/45 p-3 text-white shadow-[0_20px_50px_-12px_rgb(0_0_0/0.5)]" style={{ animation: `float 6s ease-in-out ${float} infinite` }}>
+        {children}
+      </div>
+    </motion.div>
   );
 }
