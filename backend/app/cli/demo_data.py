@@ -7,11 +7,11 @@ L = 1e5
 TENANTS = [
   {
     "slug": "skyline",
-    "name": "Skyline Realty",
+    "name": "Nivasto",
     "plan": "ENTERPRISE",
     "tagline": "Mumbai's most considered addresses",
     "about":
-      "Skyline Realty is a Mumbai boutique brokerage specialising in sea-facing residences, heritage apartments and investment-grade commercial space. Every listing is personally verified by our advisors.",
+      "Nivasto is a Mumbai boutique brokerage specialising in sea-facing residences, heritage apartments and investment-grade commercial space. Every listing is personally verified by our advisors.",
     "primaryColor": "#0f3d3e",
     "accentColor": "#d4a64a",
     "fontHeading": "playfair",

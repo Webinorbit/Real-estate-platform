@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "WebInOrbit Real Estate Dynamic Platform: multi-tenant real estate SaaS with map search, virtual tours and a broker routing engine.",
+  "description": "Nivasto by WebInOrbit: multi-tenant real estate SaaS with map search, virtual tours and a broker routing engine.",
   "scripts": {
     "dev": "node scripts/copy-vendor.mjs && next dev",
     "dev:all": "node scripts/dev-all.mjs",

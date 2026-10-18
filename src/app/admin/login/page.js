@@ -25,9 +25,21 @@ export default async function LoginPage({ searchParams }) {
         <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/35 to-primary/60" />
         <div className="relative flex h-full flex-col justify-between p-12 text-white">
           <BrandMark name={tenant.name} logoUrl={tenant.logoUrl} light href={null} />
-          <div className="max-w-md">
-            <h2 className="font-heading text-4xl font-semibold leading-tight">Every lead to the right broker, in minutes.</h2>
-            <p className="mt-4 text-white/80">Manage listings, publish immersive tours and watch your routing engine assign enquiries automatically.</p>
+          <div className="max-w-lg">
+            <h2 className="font-heading text-5xl font-semibold leading-[1.08]">Every lead to the right broker, in minutes.</h2>
+            <p className="mt-4 text-lg text-white/80">Manage listings, publish immersive tours and watch your routing engine assign enquiries automatically.</p>
+            <div className="mt-8 grid grid-cols-3 gap-3">
+              {[
+                ["< 60s", "Lead routing"],
+                ["360°", "Virtual tours"],
+                ["Live", "Map search"],
+              ].map(([v, l]) => (
+                <div key={l} className="rounded-2xl border border-white/15 bg-black/30 p-4">
+                  <p className="font-heading text-2xl font-semibold">{v}</p>
+                  <p className="mt-0.5 text-xs uppercase tracking-wider text-white/70">{l}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

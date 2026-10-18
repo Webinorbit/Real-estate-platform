@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { ArrowLeft, CalendarCheck, Check, Code2, Compass, Copy, ExternalLink, Info, Maximize2, Minimize2, Pause, Play, Share2, Smartphone, X } from "lucide-react";
+import { BrandLoader } from "@/components/brand-loader";
 import { MiniMap } from "@/components/tour/mini-map";
 import { LeadForm } from "@/components/site/lead-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -107,6 +108,7 @@ export function TourViewer({ tour, embed = false, tenantName }) {
   const [viewer, setViewer] = useState(null);
   const [sceneId, setSceneId] = useState(tour.startSceneId || scenes[0]?.id);
   const [loading, setLoading] = useState(true);
+  const [booted, setBooted] = useState(false);
   const [autoRotate, setAutoRotate] = useState(Boolean(tour.autoRotate));
   const [info, setInfo] = useState(null);
   const [fs, setFs] = useState(false);
@@ -179,6 +181,7 @@ export function TourViewer({ tour, embed = false, tenantName }) {
       v.addEventListener("ready", () => {
         if (disposed) return;
         setLoading(false);
+        setBooted(true);
         renderMarkers(first);
       }, { once: true });
       const touch = () => {
@@ -315,6 +318,8 @@ export function TourViewer({ tour, embed = false, tenantName }) {
     <div className="fixed inset-0 overflow-hidden bg-neutral-950 text-white">
       <div ref={container} className="absolute inset-0" aria-label={`360° view of ${scene?.name}`} />
 
+      {!booted && <BrandLoader inline label="Loading 360° tour" className="z-30 bg-background" />}
+
       <AnimatePresence>
         {loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-x-0 top-0 z-20 h-1 overflow-hidden bg-white/10">
@@ -398,8 +403,8 @@ export function TourViewer({ tour, embed = false, tenantName }) {
             </AnimatePresence>
           </div>
           {!embed && (
-            <button onClick={() => setBookOpen(true)} className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground shadow-lift transition hover:brightness-110 active:scale-95">
-              <CalendarCheck className="size-5" /> Book a visit
+            <button onClick={() => setBookOpen(true)} className="pointer-events-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-2xl bg-accent px-3.5 py-3 text-sm font-semibold text-accent-foreground shadow-lift transition hover:brightness-110 active:scale-95 sm:gap-2 sm:px-5">
+              <CalendarCheck className="size-4 sm:size-5" /> Book a visit
             </button>
           )}
         </div>

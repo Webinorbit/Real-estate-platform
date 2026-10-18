@@ -45,7 +45,7 @@ services:
       context: .
       args:
         API_URL: http://api:8000
-        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-WebInOrbit Real Estate}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Nivasto}
         NEXT_PUBLIC_TILE_URL: ${NEXT_PUBLIC_TILE_URL:-}
         NEXT_PUBLIC_ANALYTICS_SRC: ${NEXT_PUBLIC_ANALYTICS_SRC:-}
     restart: unless-stopped

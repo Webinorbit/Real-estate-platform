@@ -7,7 +7,11 @@ import { Toaster } from "sonner";
 const ThemeContext = createContext({ theme: "light", toggle: () => {} });
 export const useTheme = () => useContext(ThemeContext);
 
-export function Providers({ children }) {
+const BrandContext = createContext({ name: "", logoUrl: null });
+/** The current site's name and logo, for components that render outside a page (e.g. loaders). */
+export const useBrand = () => useContext(BrandContext);
+
+export function Providers({ children, brand }) {
   const [theme, setTheme] = useState("light");
 
   useEffect(() => {
@@ -29,7 +33,9 @@ export function Providers({ children }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+      <BrandContext.Provider value={brand || { name: "", logoUrl: null }}>
+        <MotionConfig reducedMotion="user">{children}</MotionConfig>
+      </BrandContext.Provider>
       <Toaster position="top-center" theme={theme} richColors closeButton toastOptions={{ className: "font-sans" }} />
     </ThemeContext.Provider>
   );
