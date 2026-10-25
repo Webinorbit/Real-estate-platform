@@ -157,9 +157,10 @@ def _import_row(
         images += [{"url": url, "alt": ""} for url in (stored_images or [])]
 
         data = parse_property_input({**row, "images": images[:40]})
-        ctx.db.add(Property(**data, slug=_slug_for(ctx, data["title"])))
+        prop = Property(**data, slug=_slug_for(ctx, data["title"]))
+        ctx.db.add(prop)
         ctx.db.commit()
-        return {"index": index, "ok": True}, room - 1, geocoded
+        return {"index": index, "ok": True, "id": prop.id}, room - 1, geocoded
     except UserError as err:
         ctx.db.rollback()
         return {"index": index, "ok": False, "error": err.message}, room, geocoded
@@ -181,5 +182,5 @@ def import_batch(body: Any = Body(default=None), ctx: AdminCtx = Depends(import_
     results = []
     for raw in rows:
         result, room, geocoded = _import_row(ctx, raw, room, geocoded, tenant_id, contact_email)
-        results.append(result)
+        results.append({k: v for k, v in result.items() if k != "id"})  # the new listing id is for the zip import only
     return {"ok": True, "results": results}

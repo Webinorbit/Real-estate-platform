@@ -94,7 +94,7 @@ def build_conditions(f: dict):
     if f["tour"]:
         conds.append(published_tour_exists())
     if f.get("city"):
-        conds.append(Property.city.ilike(_escape_like(f["city"]), escape="\\"))
+        conds.append(city_match(f["city"]))
     if f["q"].strip():
         like = f"%{_escape_like(f['q'].strip())}%"
         conds.append(or_(*(col.ilike(like, escape="\\") for col in (Property.title, Property.locality, Property.city, Property.address, Property.description))))
@@ -178,8 +178,15 @@ def cities(db: Session, limit: int = 60) -> list[dict]:
     return [{"city": c, "count": n, "lat": round(float(lat), 5), "lng": round(float(lng), 5)} for c, n, lat, lng in rows if c and lat is not None]
 
 
-def localities(db: Session, limit: int = 12, listing_type: str | None = None) -> list[dict]:
+def city_match(city: str):
+    """Case-insensitive exact match on Property.city."""
+    return Property.city.ilike(_escape_like(city), escape="\\")
+
+
+def localities(db: Session, limit: int = 12, listing_type: str | None = None, city: str | None = None) -> list[dict]:
     q = select(Property.locality, func.count(Property.id).label("n")).where(Property.status == "ACTIVE", Property.locality != "")
+    if city:
+        q = q.where(city_match(city))
     if listing_type:
         q = q.where(Property.listingType == listing_type)
     rows = db.execute(q.group_by(Property.locality).order_by(func.count(Property.id).desc(), Property.locality.asc()).limit(limit)).all()

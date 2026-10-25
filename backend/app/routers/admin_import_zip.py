@@ -10,6 +10,10 @@ POST /api/admin/import/zip        multipart field "file" = the .zip
       properties.csv     same columns as the CSV import, plus optional "featured" (yes/no) and "agent email"
       photos/<NN - title>/*   photos for row NN of properties.csv (a folder named after the title also matches);
                               a "photo files" column (names separated by | or ;) works too
+      tours/<NN - title>/*    360° panoramas (equirectangular) for row NN: one scene per image, in file-name order,
+                              named after the file ("2 - Kitchen.jpg" -> "Kitchen"), linked next/previous, published.
+                              A "tour url" column (https Matterport / Kuula / YouTube 360 link) adds an external tour.
+                              Tours need a plan with 360° tours.
     Steps run in that order. Bad rows are reported and skipped; they never stop the rest.
     -> {"ok": true, "plan": {...} | null, "settings": {...} | null, "team": {...} | null, "properties": {...} | null,
         "warnings": [str]}
@@ -33,13 +37,13 @@ from sqlalchemy import select
 from app.deps import STAFF, AdminCtx, authed
 from app.errors import PlanLocked, UserError
 from app.import_csv import TEMPLATE_CSV, auto_map, build_row
-from app.models import Broker, User
+from app.models import Broker, Hotspot, Scene, Tour, User
 from app.constants import PLANS
 from app.plans import can, plan_of
 from app.routers.admin_brokers import create_broker_record
 from app.routers.admin_import import _import_row, _remaining
 from app.routers.admin_settings import apply_settings, settings_initial
-from app.storage import process_image, store_image
+from app.storage import panorama_thumb, process_image, store_image
 
 log = logging.getLogger("import.zip")
 router = APIRouter(prefix="/api/admin/import")
@@ -50,6 +54,8 @@ MAX_ENTRIES = 3000
 MAX_IMAGE_BYTES = 25 * 1024 * 1024
 MAX_ROWS = 500
 MAX_PHOTOS_PER_LISTING = 12
+MAX_SCENES_PER_TOUR = 20
+PANO_BYTES = 40 * 1024 * 1024
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
 
 TEAM_COLUMNS = {
@@ -240,14 +246,63 @@ def _import_team(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
     return {"created": created, "skipped": skipped, "logins": logins}
 
 
-def _photo_folder(bundle: Bundle, index: int, title: str) -> str | None:
-    folders = bundle.subfolders("photos")
+def _row_folder(bundle: Bundle, root: str, index: int, title: str) -> str | None:
+    """The folder under `root` for CSV row `index`: "07 - Title" / "7" by number, else by title."""
+    folders = bundle.subfolders(root)
     want = _norm(title)
     for f in folders:
         m = re.match(r"^\s*0*(\d+)\b", f)
         if m and int(m.group(1)) == index:
-            return f"photos/{f}"
-    return next((f"photos/{f}" for f in folders if _norm(re.sub(r"^\s*\d+\s*[-_.]?\s*", "", f)) == want), None)
+            return f"{root}/{f}"
+    return next((f"{root}/{f}" for f in folders if _norm(re.sub(r"^\s*\d+\s*[-_.]?\s*", "", f)) == want), None)
+
+
+def _scene_name(path: str, k: int) -> str:
+    stem = re.sub(r"^\s*\d+\s*[-_.)]?\s*", "", PurePosixPath(path).stem)
+    stem = re.sub(r"[-_]+", " ", stem).strip()
+    return (stem[:1].upper() + stem[1:])[:60] if stem else f"Room {k + 1}"
+
+
+def _panorama_tour(ctx: AdminCtx, bundle: Bundle, prop_id: str, title: str, paths: list[str]) -> int:
+    """Creates a published 360° tour: one scene per panorama, each linked to the next and previous room."""
+    tenant_id = ctx.tenant.id
+    scenes = []
+    for k, path in enumerate(paths[:MAX_SCENES_PER_TOUR]):
+        try:
+            processed = process_image(bundle.read(path, PANO_BYTES), "panorama")
+            url = store_image(processed["buffer"], processed["ext"], tenant_id, "panos")["url"]
+            thumb = panorama_thumb(processed["buffer"])
+            thumb_url = store_image(thumb["buffer"], thumb["ext"], tenant_id, "thumbs")["url"]
+        except UserError:
+            continue
+        scenes.append(Scene(name=_scene_name(path, k), roomLabel=_scene_name(path, k), floor=0, panoramaUrl=url, thumbUrl=thumb_url, order=len(scenes)))
+    if not scenes:
+        return 0
+    tour = Tour(propertyId=prop_id, title=f"{title} - 360° tour"[:120], kind="PANORAMA", published=True, autoRotate=True)
+    ctx.db.add(tour)
+    ctx.db.flush()
+    for scene in scenes:
+        scene.tourId = tour.id
+        ctx.db.add(scene)
+    ctx.db.flush()
+    tour.startSceneId = scenes[0].id
+    n = len(scenes)
+    for k, scene in enumerate(scenes):
+        nxt, prev = scenes[(k + 1) % n], scenes[(k - 1) % n]
+        if n > 1:
+            ctx.db.add(Hotspot(sceneId=scene.id, type="LINK", yaw=0, pitch=-4, label=nxt.name, targetSceneId=nxt.id))
+        if n > 2:
+            ctx.db.add(Hotspot(sceneId=scene.id, type="LINK", yaw=180, pitch=-4, label=prev.name, targetSceneId=prev.id))
+    ctx.db.commit()
+    return n
+
+
+def _external_tour(ctx: AdminCtx, prop_id: str, title: str, url: str) -> bool:
+    if not re.match(r"^https://[^\s/]+\.[^\s]+$", url):
+        return False
+    ctx.db.add(Tour(propertyId=prop_id, title=f"{title} - 3D tour"[:120], kind="EXTERNAL", externalUrl=url[:500], published=True, autoRotate=True))
+    ctx.db.commit()
+    return True
 
 
 def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
@@ -260,6 +315,9 @@ def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
     featured_col = norm_headers.get("featured")
     agent_col = next((norm_headers[a] for a in ("agent email", "listing agent", "broker email", "agent") if a in norm_headers), None)
     files_col = next((norm_headers[a] for a in ("photo files", "photos files", "image files") if a in norm_headers), None)
+    tour_col = next((norm_headers[a] for a in ("tour url", "virtual tour", "3d tour", "matterport", "tour link") if a in norm_headers), None)
+    tours_on = can(ctx.tenant, "tours")
+    tours_wanted = tours_made = scenes_made = 0
     brokers = {b.email.lower(): b.id for b in ctx.db.scalars(select(Broker)) if b.email}
 
     tenant_id, contact_email = ctx.tenant.id, ctx.tenant.contactEmail
@@ -276,7 +334,7 @@ def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
         if files_col and raw.get(files_col):
             paths = [p for p in (bundle.by_basename(n) for n in _split(raw[files_col])) if p]
         if not paths:
-            folder = _photo_folder(bundle, i, row.get("title") or "")
+            folder = _row_folder(bundle, "photos", i, row.get("title") or "")
             paths = bundle.images_in(folder) if folder else []
         stored = []
         for p in paths[:MAX_PHOTOS_PER_LISTING]:
@@ -290,9 +348,30 @@ def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
         if result["ok"]:
             created += 1
             photo_count += len(stored)
+            tour_folder = _row_folder(bundle, "tours", i, row.get("title") or "")
+            panos = bundle.images_in(tour_folder) if tour_folder else []
+            link = (raw.get(tour_col) or "").strip() if tour_col else ""
+            if panos or link:
+                tours_wanted += 1
+                if tours_on:
+                    try:
+                        n = _panorama_tour(ctx, bundle, result["id"], row["title"], panos) if panos else 0
+                        if n:
+                            tours_made, scenes_made = tours_made + 1, scenes_made + n
+                        elif link and _external_tour(ctx, result["id"], row["title"], link):
+                            tours_made += 1
+                        else:
+                            failed.append({"row": i, "title": row.get("title") or "", "error": "Listing added, but its tour was skipped (no valid panoramas or https tour link)"})
+                    except Exception:
+                        ctx.db.rollback()
+                        log.exception("Tour import failed")
+                        failed.append({"row": i, "title": row.get("title") or "", "error": "Listing added, but its tour could not be created"})
         else:
             failed.append({"row": i, "title": row.get("title") or "", "error": result["error"]})
-    return {"created": created, "failed": failed, "photos": photo_count}
+    out = {"created": created, "failed": failed, "photos": photo_count, "tours": tours_made, "scenes": scenes_made}
+    if tours_wanted and not tours_on:
+        out["toursSkipped"] = tours_wanted
+    return out
 
 
 @router.post("/zip")
@@ -324,6 +403,8 @@ def import_zip(file: UploadFile = File(...), ctx: AdminCtx = Depends(authed(STAF
     settings = _apply_settings(ctx, bundle, overrides, warnings)
     team = _import_team(ctx, bundle, team_path) if team_path else None
     properties = _import_properties(ctx, bundle, props_path) if props_path else None
+    if properties and properties.get("toursSkipped"):
+        warnings.append(f"{properties['toursSkipped']} virtual tour(s) skipped: this plan does not include 360° tours.")
     return {"ok": True, "plan": plan, "settings": settings, "team": team, "properties": properties, "warnings": warnings}
 
 
@@ -342,6 +423,10 @@ properties.csv    Same columns as the CSV import. Extra columns: "featured" (yes
                   (a team member's email, to assign the listing).
 photos/           One folder per listing named "01 - Title", "02 - Title"... (number = row in properties.csv).
                   JPG, PNG or WebP, up to 12 per listing.
+tours/            Optional 360° tours, same folder names as photos/. Put one 360° panorama per room, named in
+                  walking order: "1 - Living room.jpg", "2 - Kitchen.jpg"... Rooms are linked next/previous.
+                  Or add a "tour url" column in properties.csv with a https Matterport / Kuula / YouTube 360 link.
+                  Tours need the Pro or Enterprise plan.
 """
 
 TEMPLATE_SETTINGS = {
@@ -377,4 +462,5 @@ def zip_template(ctx: AdminCtx = Depends(authed(STAFF))):
         z.writestr("setup/properties.csv", TEMPLATE_CSV.replace("status\n", "status,featured,agent email\n").replace('"active"\n', '"active","yes","asha@youragency.com"\n'))
         z.writestr("setup/hero/", "")
         z.writestr("setup/photos/01 - Sea-view 3 BHK in Bandra/", "")
+        z.writestr("setup/tours/01 - Sea-view 3 BHK in Bandra/", "")
     return Response(buf.getvalue(), media_type="application/zip", headers={"Content-Disposition": 'attachment; filename="setup-template.zip"'})

@@ -22,7 +22,7 @@ from app.models import Broker, Favorite, Property, SavedSearch, Tenant, Tour
 from app.plans import can, features_json
 from app.rate_limit import client_ip, rate_limit
 from app.routing.service import create_and_route_lead, public_broker_card
-from app.search import cities, lite_by_ids, localities, parse_filters, search_properties, to_lite, published_tour_exists
+from app.search import cities, city_match, lite_by_ids, localities, parse_filters, search_properties, to_lite, published_tour_exists
 from app.serialize import ser
 from app.validate import EMAIL_RE, ID_RE, boolean, parse_dt
 
@@ -47,12 +47,15 @@ def get_tenant(ctx: Ctx = Depends(public_ctx)):
 
 
 @router.get("/public/home")
-def get_home(ctx: Ctx = Depends(public_ctx)):
-    return cache.get_or_set((ctx.tenant.id, "home"), PUBLIC_TTL, lambda: _build_home(ctx))
+def get_home(city: str = "", ctx: Ctx = Depends(public_ctx)):
+    """Home page data. With ?city= the listings, areas and tours are limited to that city (stats and team stay site-wide)."""
+    city = city.strip()[:80]
+    return cache.get_or_set((ctx.tenant.id, "home", city.lower()), PUBLIC_TTL, lambda: _build_home(ctx, city))
 
 
-def _build_home(ctx: Ctx) -> dict:
+def _build_home(ctx: Ctx, city: str = "") -> dict:
     db, tenant = ctx.db, ctx.tenant
+    in_city = [city_match(city)] if city else []
     n_properties, n_brokers, n_tours, n_cities = db.execute(
         select(
             select(func.count(Property.id)).where(Property.status == "ACTIVE").scalar_subquery(),
@@ -62,11 +65,17 @@ def _build_home(ctx: Ctx) -> dict:
         )
     ).one()
     stats = {"properties": n_properties, "brokers": n_brokers, "tours": n_tours, "cities": n_cities}
-    locs = localities(db, 10)
+    locs = localities(db, 10, city=city or None)
 
     featured_rows = db.execute(
-        select(Property, published_tour_exists().label("hasTour")).where(Property.status == "ACTIVE", Property.featured.is_(True)).order_by(Property.createdAt.desc()).limit(8)
+        select(Property, published_tour_exists().label("hasTour"))
+        .where(Property.status == "ACTIVE", *in_city)
+        .order_by(Property.featured.desc(), Property.createdAt.desc())
+        .limit(8)
     ).all()
+    if not city:
+        # Site-wide the carousel shows hand-picked listings only; in a city it tops up with the newest ones there.
+        featured_rows = [r for r in featured_rows if r[0].featured]
 
     tile_areas = locs[:6]
     representatives = db.scalars(
@@ -87,12 +96,14 @@ def _build_home(ctx: Ctx) -> dict:
     spotlight = []
     if can(tenant, "tours"):
         tours = db.scalars(
-            select(Tour).options(joinedload(Tour.property), joinedload(Tour.scenes)).where(Tour.published.is_(True)).order_by(Tour.createdAt.desc()).limit(4)
+            select(Tour).options(joinedload(Tour.property), joinedload(Tour.scenes))
+            .where(Tour.published.is_(True), *([Tour.property.has(city_match(city))] if city else []))
+            .order_by(Tour.createdAt.desc()).limit(4)
         ).unique().all()
         spotlight = [ser(t, property=ser(t.property), scenes=[ser(s, only=("id", "panoramaUrl", "name")) for s in t.scenes]) for t in tours]
 
     return {
-        "stats": stats, "localities": locs, "featured": [to_lite(p, h) for p, h in featured_rows], "tiles": tiles,
+        "city": city, "stats": stats, "localities": locs, "featured": [to_lite(p, h) for p, h in featured_rows], "tiles": tiles,
         "team": [ser(b) for b in team], "tours": spotlight,
     }
 

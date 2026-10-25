@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, ChevronDown, Globe2, LocateFixed, Loader2, MapPin, Search } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/controls";
@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
  */
 
 const KEY = "location:city";
+/** Mirror of the choice for server-rendered pages (the home page reads it). */
+export const CITY_COOKIE = "loc_city";
 const ASKED = "location:asked";
 const EVENT = "location-change";
 const NEAR_KM = 150;
@@ -51,6 +53,9 @@ export function setChosenCity(city, source = "manual") {
     else localStorage.removeItem(KEY);
     localStorage.setItem(ASKED, "1");
   } catch {}
+  document.cookie = city
+    ? `${CITY_COOKIE}=${encodeURIComponent(city)}; path=/; max-age=31536000; samesite=lax`
+    : `${CITY_COOKIE}=; path=/; max-age=0; samesite=lax`;
   window.dispatchEvent(new CustomEvent(EVENT, { detail: { city: city || "", source } }));
 }
 
@@ -106,7 +111,21 @@ async function detectCity() {
 export function LocationPicker({ overlay, className, onPicked }) {
   const city = useChosenCity();
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // The home page is rendered on the server from the city cookie: re-render it when the city changes.
+  useEffect(() => {
+    const fn = () => pathname === "/" && router.refresh();
+    window.addEventListener(EVENT, fn);
+    return () => window.removeEventListener(EVENT, fn);
+  }, [pathname, router]);
+
+  // Older visits saved the city only in this browser: copy it to the cookie once.
+  useEffect(() => {
+    const saved = read();
+    if (saved && !document.cookie.split("; ").some((c) => c.startsWith(`${CITY_COOKIE}=`))) setChosenCity(saved, "restore");
+  }, []);
   const [cities, setCities] = useState([]);
   const [query, setQuery] = useState("");
   const [detecting, setDetecting] = useState(false);

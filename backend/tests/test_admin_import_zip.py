@@ -6,15 +6,15 @@ import pytest
 from PIL import Image
 from sqlalchemy import delete, select
 
-from app.models import Broker, Property, User
+from app.models import Broker, Hotspot, Property, Scene, Tour, User
 from tests.team_helpers import login, tenant_db, uid
 
 TENANT = "urbannest"
 
 
-def png() -> bytes:
+def png(w: int = 64, h: int = 48) -> bytes:
     buf = io.BytesIO()
-    Image.new("RGB", (64, 48), (15, 61, 62)).save(buf, "PNG")
+    Image.new("RGB", (w, h), (15, 61, 62)).save(buf, "PNG")
     return buf.getvalue()
 
 
@@ -41,6 +41,8 @@ def make_zip(tag: str, plan: str | None = None, nested: bool = True) -> bytes:
         )
         z.writestr(f"{root}photos/01 - Zip Home {tag}/1.png", png())
         z.writestr(f"{root}photos/01 - Zip Home {tag}/2.png", png())
+        z.writestr(f"{root}tours/01 - Zip Home {tag}/1 - Living room.png", png(400, 200))
+        z.writestr(f"{root}tours/01 - Zip Home {tag}/2 - Master_bedroom.png", png(400, 200))
         z.writestr(f"{root}__MACOSX/._junk", b"junk")
     return buf.getvalue()
 
@@ -92,6 +94,13 @@ def test_super_admin_zip_sets_plan_settings_team_and_listings(cleanup):
         assert broker.photoUrl and broker.languages == ["English", "Hindi"]
         prop = db.scalars(select(Property).where(Property.title == f"Zip Home {tag}")).one()
         assert prop.featured and prop.listingBrokerId == broker.id and len(prop.images) == 2
+        tour = db.scalars(select(Tour).where(Tour.propertyId == prop.id)).one()
+        scenes = db.scalars(select(Scene).where(Scene.tourId == tour.id).order_by(Scene.order)).all()
+        assert tour.published and tour.startSceneId == scenes[0].id
+        assert [s.name for s in scenes] == ["Living room", "Master bedroom"]
+        links = db.scalars(select(Hotspot).where(Hotspot.sceneId == scenes[0].id)).all()
+        assert [h.targetSceneId for h in links] == [scenes[1].id]
+    assert body["properties"]["tours"] == 1 and body["properties"]["scenes"] == 2
 
 
 def test_owner_on_pro_plan_ignores_plan_key(cleanup):
