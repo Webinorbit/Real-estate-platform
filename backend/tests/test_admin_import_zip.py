@@ -129,3 +129,54 @@ def test_template_downloads():
     assert res.status_code == 200 and res.headers["content-type"] == "application/zip"
     names = zipfile.ZipFile(io.BytesIO(res.content)).namelist()
     assert {"setup/settings.json", "setup/team.csv", "setup/properties.csv"} <= set(names)
+
+
+def chunked_upload(client, data: bytes, size: int):
+    start = client.post("/api/admin/import/zip/start")
+    assert start.status_code == 200, start.text
+    upload_id = start.json()["uploadId"]
+    for i in range(0, len(data), size):
+        res = client.post(f"/api/admin/import/zip/{upload_id}/chunk", files={"chunk": ("blob", data[i:i + size], "application/octet-stream")})
+        assert res.status_code == 200, res.text
+    return upload_id
+
+
+def wait_for(client, upload_id: str) -> dict:
+    import time
+
+    for _ in range(200):
+        body = client.get(f"/api/admin/import/zip/{upload_id}/status").json()
+        if body["status"] in ("done", "error"):
+            return body
+        time.sleep(0.05)
+    raise AssertionError("import did not finish")
+
+
+def test_chunked_upload_imports_in_background(cleanup):
+    tag = uid()
+    cleanup.append(tag)
+    client = login("super@webinorbit.demo", TENANT)
+    data = make_zip(tag, plan="PRO")
+    upload_id = chunked_upload(client, data, len(data) // 3 + 1)
+
+    # Another signed-in user cannot see, add to or start someone else's upload.
+    other = login("owner@urbannest.demo", TENANT)
+    assert other.get(f"/api/admin/import/zip/{upload_id}/status").status_code == 404
+    assert other.post(f"/api/admin/import/zip/{upload_id}/finish").status_code == 404
+
+    assert client.post(f"/api/admin/import/zip/{upload_id}/finish").json() == {"ok": True}
+    body = wait_for(client, upload_id)
+    assert body["status"] == "done", body
+    result = body["result"]
+    assert result["plan"]["plan"] == "PRO" and result["team"]["created"] == 1
+    assert result["properties"]["created"] == 1 and result["properties"]["tours"] == 1
+    assert client.post(f"/api/admin/import/zip/{upload_id}/finish").status_code == 400  # already used
+
+
+def test_chunked_upload_reports_bad_zip_and_plan_lock(cleanup):
+    client = login("super@webinorbit.demo", TENANT)
+    upload_id = chunked_upload(client, b"definitely not a zip", 8)
+    client.post(f"/api/admin/import/zip/{upload_id}/finish")
+    assert wait_for(client, upload_id) == {"status": "error", "step": "reading", "done": 0, "total": 0, "error": "That file is not a valid .zip"}
+    assert login("owner@urbannest.demo", TENANT).post("/api/admin/import/zip/start").json()["code"] == "plan_locked"
+    assert client.get("/api/admin/import/zip/not-a-real-id/status").status_code == 404

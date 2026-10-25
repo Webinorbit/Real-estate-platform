@@ -18,6 +18,16 @@ POST /api/admin/import/zip        multipart field "file" = the .zip
     -> {"ok": true, "plan": {...} | null, "settings": {...} | null, "team": {...} | null, "properties": {...} | null,
         "warnings": [str]}
 
+Large zips (the browser uses this flow): web servers in front of the app usually cap request bodies (nginx at
+25 MB on our VPS) and proxy time, so the zip is sent in chunks and imported in the background.
+    POST /api/admin/import/zip/start                    -> {"uploadId", "chunkBytes"}   (plan checked here)
+    POST /api/admin/import/zip/{uploadId}/chunk         multipart "chunk" (<= 20 MB, in order) -> {"received": bytes}
+    POST /api/admin/import/zip/{uploadId}/finish        -> {"ok": true}   starts the import in the background
+    GET  /api/admin/import/zip/{uploadId}/status        -> {"status": "uploading"|"running"|"done"|"error",
+                                                            "step", "done", "total", "result"?, "error"?}
+    Only the person who started an upload can see or continue it. Staged files live in the system temp folder
+    (never under the public uploads folder) and are deleted after the import; unfinished uploads expire after 3 hours.
+
 GET /api/admin/import/zip-template
     A small example zip with every file above, to download and fill in.
 """
@@ -27,17 +37,23 @@ import io
 import json
 import logging
 import re
+import secrets
+import tempfile
+import threading
+import time
 import zipfile
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import select
 
-from app.deps import STAFF, AdminCtx, authed
-from app.errors import PlanLocked, UserError
+from app import cache
+from app.db import SessionLocal, bind_tenant
+from app.deps import STAFF, AdminCtx, _tenant_cache, authed
+from app.errors import NotFound, PlanLocked, UserError
 from app.import_csv import TEMPLATE_CSV, auto_map, build_row
-from app.models import Broker, Hotspot, Scene, Tour, User
+from app.models import Broker, Hotspot, Scene, Tenant, Tour, User
 from app.constants import PLANS
 from app.plans import can, plan_of
 from app.routers.admin_brokers import create_broker_record
@@ -305,7 +321,7 @@ def _external_tour(ctx: AdminCtx, prop_id: str, title: str, url: str) -> bool:
     return True
 
 
-def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
+def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str, progress=None) -> dict:
     rows = bundle.csv_rows(path)
     if not rows:
         return {"created": 0, "failed": [], "photos": 0}
@@ -324,6 +340,8 @@ def _import_properties(ctx: AdminCtx, bundle: Bundle, path: str) -> dict:
     room, geocoded = _remaining(ctx), False
     created, failed, photo_count = 0, [], 0
     for i, raw in enumerate(rows, start=1):
+        if progress:
+            progress("listings", i - 1, len(rows))
         row = build_row(raw, mapping)
         if featured_col:
             row["featured"] = _truthy(raw.get(featured_col))
@@ -379,6 +397,13 @@ def import_zip(file: UploadFile = File(...), ctx: AdminCtx = Depends(authed(STAF
     data = file.file.read(MAX_ZIP_BYTES + 1)
     if len(data) > MAX_ZIP_BYTES:
         raise UserError("The zip is larger than 200 MB")
+    return run_import(ctx, data)
+
+
+def run_import(ctx: AdminCtx, data: bytes, progress=None) -> dict:
+    """The whole zip import for ctx.tenant: plan, branding, team, then listings (with photos and tours)."""
+    step = progress or (lambda *_a: None)
+    step("reading")
     bundle = Bundle(data)
 
     warnings: list[str] = []
@@ -400,12 +425,126 @@ def import_zip(file: UploadFile = File(...), ctx: AdminCtx = Depends(authed(STAF
     if not (overrides or team_path or props_path or bundle.find("logo.png") or bundle.images_in("hero")):
         raise UserError("Nothing to import. Add settings.json, team.csv or properties.csv to the zip.")
 
+    step("branding")
     settings = _apply_settings(ctx, bundle, overrides, warnings)
+    step("team")
     team = _import_team(ctx, bundle, team_path) if team_path else None
-    properties = _import_properties(ctx, bundle, props_path) if props_path else None
+    properties = _import_properties(ctx, bundle, props_path, progress) if props_path else None
     if properties and properties.get("toursSkipped"):
         warnings.append(f"{properties['toursSkipped']} virtual tour(s) skipped: this plan does not include 360° tours.")
     return {"ok": True, "plan": plan, "settings": settings, "team": team, "properties": properties, "warnings": warnings}
+
+
+# ---------- chunked upload + background import ----------
+
+CHUNK_BYTES = 8 * 1024 * 1024
+MAX_CHUNK_BYTES = 20 * 1024 * 1024
+JOB_TTL = 3 * 3600
+STAGING = Path(tempfile.gettempdir()) / "realestate-zip-imports"
+_jobs: dict[str, dict] = {}
+_jobs_lock = threading.Lock()
+
+
+def _staged(upload_id: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9_-]{20,64}", upload_id or ""):
+        raise NotFound("Upload not found")
+    return STAGING / f"{upload_id}.zip"
+
+
+def _job(ctx: AdminCtx, upload_id: str) -> dict:
+    with _jobs_lock:
+        job = _jobs.get(upload_id)
+    if not job or job["owner"] != (ctx.tenant.id, ctx.user.id):
+        raise NotFound("Upload not found")
+    return job
+
+
+def _update(upload_id: str, **fields) -> None:
+    with _jobs_lock:
+        if upload_id in _jobs:
+            _jobs[upload_id].update(fields)
+
+
+def _expire_old() -> None:
+    now = time.time()
+    with _jobs_lock:
+        old = [k for k, j in _jobs.items() if now - j["created"] > JOB_TTL]
+        for k in old:
+            _jobs.pop(k, None)
+    for k in old:
+        _staged(k).unlink(missing_ok=True)
+
+
+@router.post("/zip/start")
+def zip_start(ctx: AdminCtx = Depends(authed(STAFF))):
+    if not can(ctx.tenant, "csvImport") and ctx.user.role != "SUPER":
+        raise PlanLocked("csvImport")
+    _expire_old()
+    upload_id = secrets.token_urlsafe(24)
+    STAGING.mkdir(parents=True, exist_ok=True)
+    _staged(upload_id).write_bytes(b"")
+    with _jobs_lock:
+        _jobs[upload_id] = {"owner": (ctx.tenant.id, ctx.user.id), "status": "uploading", "size": 0, "created": time.time(),
+                            "step": "uploading", "done": 0, "total": 0}
+    return {"uploadId": upload_id, "chunkBytes": CHUNK_BYTES}
+
+
+@router.post("/zip/{upload_id}/chunk")
+def zip_chunk(upload_id: str, chunk: UploadFile = File(...), ctx: AdminCtx = Depends(authed(STAFF))):
+    job = _job(ctx, upload_id)
+    if job["status"] != "uploading":
+        raise UserError("This upload is already being imported")
+    data = chunk.file.read(MAX_CHUNK_BYTES + 1)
+    if len(data) > MAX_CHUNK_BYTES:
+        raise UserError("Upload chunks must be 20 MB or smaller")
+    if job["size"] + len(data) > MAX_ZIP_BYTES:
+        _staged(upload_id).unlink(missing_ok=True)
+        _update(upload_id, status="error", error="The zip is larger than 200 MB")
+        raise UserError("The zip is larger than 200 MB")
+    with _staged(upload_id).open("ab") as fh:
+        fh.write(data)
+    _update(upload_id, size=job["size"] + len(data))
+    return {"received": job["size"] + len(data)}
+
+
+def _run_job(upload_id: str, tenant_id: str, user_id: str) -> None:
+    path = _staged(upload_id)
+    progress = lambda step, done=0, total=0: _update(upload_id, step=step, done=done, total=total)  # noqa: E731
+    try:
+        data = path.read_bytes()
+        with SessionLocal() as db:
+            bind_tenant(db, tenant_id)
+            tenant, user = db.get(Tenant, tenant_id), db.get(User, user_id)
+            ctx = AdminCtx(request=None, db=db, tenant=tenant, user=user, features=plan_of(tenant))
+            result = run_import(ctx, data, progress)
+        _update(upload_id, status="done", step="done", result=result)
+    except UserError as err:
+        _update(upload_id, status="error", error=err.message)
+    except Exception:  # noqa: BLE001
+        log.exception("Background zip import failed")
+        _update(upload_id, status="error", error="Something went wrong while importing. Please try again.")
+    finally:
+        path.unlink(missing_ok=True)
+        cache.clear()
+        _tenant_cache.clear()
+
+
+@router.post("/zip/{upload_id}/finish")
+def zip_finish(upload_id: str, ctx: AdminCtx = Depends(authed(STAFF))):
+    job = _job(ctx, upload_id)
+    if job["status"] != "uploading":
+        raise UserError("This upload is already being imported")
+    if not job["size"]:
+        raise UserError("No file was uploaded")
+    _update(upload_id, status="running", step="reading")
+    threading.Thread(target=_run_job, args=(upload_id, ctx.tenant.id, ctx.user.id), daemon=True, name=f"zip-import-{upload_id[:6]}").start()
+    return {"ok": True}
+
+
+@router.get("/zip/{upload_id}/status")
+def zip_status(upload_id: str, ctx: AdminCtx = Depends(authed(STAFF))):
+    job = _job(ctx, upload_id)
+    return {k: job.get(k) for k in ("status", "step", "done", "total", "result", "error") if job.get(k) is not None}
 
 
 TEMPLATE_README = """ONE-ZIP SETUP
