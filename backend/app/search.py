@@ -49,6 +49,7 @@ def parse_filters(params: Mapping[str, str]) -> dict:
         "types": [t.upper() for t in _list(get("types"))],
         "amen": _list(get("amen")),
         "q": str(get("q") or "")[:100],
+        "city": str(get("city") or "").strip()[:80],
         "minArea": _num(get("minArea")), "maxArea": _num(get("maxArea")),
         "tour": get("tour") == "1", "feat": get("feat") == "1",
         "sort": get("sort") if get("sort") in SORTS else "featured",
@@ -92,6 +93,8 @@ def build_conditions(f: dict):
         conds.append(Property.featured.is_(True))
     if f["tour"]:
         conds.append(published_tour_exists())
+    if f.get("city"):
+        conds.append(Property.city.ilike(_escape_like(f["city"]), escape="\\"))
     if f["q"].strip():
         like = f"%{_escape_like(f['q'].strip())}%"
         conds.append(or_(*(col.ilike(like, escape="\\") for col in (Property.title, Property.locality, Property.city, Property.address, Property.description))))
@@ -161,6 +164,18 @@ def lite_by_ids(db: Session, ids: list[str], statuses=("ACTIVE", "PENDING", "SOL
     order = {pid: i for i, pid in enumerate(ids)}
     rows.sort(key=lambda r: order[r[0].id])
     return [to_lite(p, has) for p, has in rows]
+
+
+def cities(db: Session, limit: int = 60) -> list[dict]:
+    """Cities with active listings: name, listing count and the average position (used as the map centre)."""
+    rows = db.execute(
+        select(Property.city, func.count(Property.id), func.avg(Property.lat), func.avg(Property.lng))
+        .where(Property.status == "ACTIVE", Property.city != "")
+        .group_by(Property.city)
+        .order_by(func.count(Property.id).desc(), Property.city.asc())
+        .limit(limit)
+    ).all()
+    return [{"city": c, "count": n, "lat": round(float(lat), 5), "lng": round(float(lng), 5)} for c, n, lat, lng in rows if c and lat is not None]
 
 
 def localities(db: Session, limit: int = 12, listing_type: str | None = None) -> list[dict]:

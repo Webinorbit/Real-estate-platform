@@ -14,11 +14,12 @@ const loadContext = cache(async () => {
 });
 
 /** Shared context for admin pages and actions. Redirects to login if there is no valid session. */
-export async function adminContext({ staffOnly = false, feature } = {}) {
+export async function adminContext({ staffOnly = false, feature, superBypass = false } = {}) {
   const { user, tenant, isStaff, brokerId, photoUrl, newLeads } = await loadContext();
   const features = planOf(tenant);
   if (staffOnly && !isStaff) redirect("/admin?denied=1");
-  if (feature && !features[feature]) redirect(`/admin/plan?locked=${feature}`);
+  // superBypass: WebInOrbit admins may open the page on any plan (the bulk import can upgrade the client).
+  if (feature && !features[feature] && !(superBypass && user.role === "SUPER")) redirect(`/admin/plan?locked=${feature}`);
   return { user, tenant, features, isStaff, brokerId, photoUrl, newLeads };
 }
 

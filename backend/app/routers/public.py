@@ -22,7 +22,7 @@ from app.models import Broker, Favorite, Property, SavedSearch, Tenant, Tour
 from app.plans import can, features_json
 from app.rate_limit import client_ip, rate_limit
 from app.routing.service import create_and_route_lead, public_broker_card
-from app.search import lite_by_ids, localities, parse_filters, search_properties, to_lite, published_tour_exists
+from app.search import cities, lite_by_ids, localities, parse_filters, search_properties, to_lite, published_tour_exists
 from app.serialize import ser
 from app.validate import EMAIL_RE, ID_RE, boolean, parse_dt
 
@@ -100,6 +100,12 @@ def _build_home(ctx: Ctx) -> dict:
 @router.get("/public/localities")
 def get_localities(limit: int = 30, listingType: str | None = None, ctx: Ctx = Depends(public_ctx)):
     return {"localities": localities(ctx.db, max(1, min(limit, 100)), listingType if listingType in ("SALE", "RENT") else None)}
+
+
+@router.get("/public/cities")
+def get_cities(ctx: Ctx = Depends(public_ctx)):
+    """Cities with active listings, most listings first: [{city, count, lat, lng}] for the location picker."""
+    return cache.get_or_set((ctx.tenant.id, "cities"), PUBLIC_TTL, lambda: {"cities": cities(ctx.db)})
 
 
 @router.get("/properties")

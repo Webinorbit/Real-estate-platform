@@ -39,6 +39,8 @@ export function proxy(request) {
   return NextResponse.next({ request: { headers } });
 }
 
+// File uploads skip the proxy: Next buffers bodies that pass through it and cuts them off at 10 MB,
+// which broke large photos and setup zips. The /api bridge forwards the host header itself.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|uploads/|demo/|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|mp4|woff2?)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|uploads/|demo/|api/uploads|api/admin/import/zip|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|mp4|woff2?)$).*)"],
 };

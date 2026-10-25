@@ -182,6 +182,11 @@ def get_settings(ctx=Depends(staff_ctx)):
 
 @router.put("/settings")
 def save_settings(ctx=Depends(staff_ctx), body: dict = Body(default_factory=dict)):
+    return apply_settings(ctx, body)
+
+
+def apply_settings(ctx, body: dict) -> dict:
+    """Validates and saves the settings form for ctx.tenant (shared by the settings page and the zip import)."""
     d = _parse_settings(body)
     tenant: Tenant = ctx.tenant
     hero, domain_input, webhook_url = d.pop("heroImages"), d.pop("customDomain"), d.pop("webhookUrl")

@@ -125,7 +125,10 @@ def preview(body: Any = Body(default=None), ctx: AdminCtx = Depends(import_staff
     return {"mapping": mapping, "rows": [{"row": b, "check": check_row(b)} for b in built]}
 
 
-def _import_row(ctx: AdminCtx, raw: Any, room: float, geocoded: bool, tenant_id: str, contact_email: str | None) -> tuple[dict, float, bool]:
+def _import_row(
+    ctx: AdminCtx, raw: Any, room: float, geocoded: bool, tenant_id: str, contact_email: str | None, stored_images: list[str] | None = None
+) -> tuple[dict, float, bool]:
+    """Creates one listing. `stored_images` are URLs already processed and stored (zip import); they go after any downloaded ones."""
     index = raw.get("__index") if isinstance(raw, dict) else None
     try:
         if not isinstance(raw, dict):
@@ -151,8 +154,9 @@ def _import_row(ctx: AdminCtx, raw: Any, room: float, geocoded: bool, tenant_id:
                 images.append({"url": import_remote_image(img["url"], tenant_id), "alt": ""})
             except Exception:
                 pass
+        images += [{"url": url, "alt": ""} for url in (stored_images or [])]
 
-        data = parse_property_input({**row, "images": images})
+        data = parse_property_input({**row, "images": images[:40]})
         ctx.db.add(Property(**data, slug=_slug_for(ctx, data["title"])))
         ctx.db.commit()
         return {"index": index, "ok": True}, room - 1, geocoded

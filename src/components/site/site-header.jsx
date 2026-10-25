@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Heart, LayoutDashboard, Menu, Moon, Search, Sun, Phone } from "lucide-react";
 import { motion } from "framer-motion";
 import { BrandMark } from "@/components/site/brand";
+import { LocationPicker, useChosenCity } from "@/components/site/location";
 import { useTheme } from "@/components/providers";
 import { useVisitor } from "@/components/site/stores";
 import { Sheet } from "@/components/ui/dialog";
@@ -20,6 +21,8 @@ export function SiteHeader({ tenant, onOpenSearch }) {
   const [scrolled, setScrolled] = useState(false);
   const [menu, setMenu] = useState(false);
   const overlay = pathname === "/" && !scrolled;
+  const city = useChosenCity();
+  const inCity = city ? `&city=${encodeURIComponent(city)}` : "";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -29,8 +32,8 @@ export function SiteHeader({ tenant, onOpenSearch }) {
   }, []);
 
   const links = [
-    { href: "/properties?lt=SALE", label: "Buy", match: (p, s) => p.startsWith("/properties") && !s.includes("RENT") },
-    { href: "/properties?lt=RENT", label: "Rent", match: (p, s) => p.startsWith("/properties") && s.includes("RENT") },
+    { href: `/properties?lt=SALE${inCity}`, label: "Buy", match: (p, s) => p.startsWith("/properties") && !s.includes("RENT") },
+    { href: `/properties?lt=RENT${inCity}`, label: "Rent", match: (p, s) => p.startsWith("/properties") && s.includes("RENT") },
     ...(tenant.toursEnabled ? [{ href: "/tours", label: "Virtual tours", match: (p) => p.startsWith("/tour") }] : []),
     { href: "/brokers", label: "Our team", match: (p) => p.startsWith("/brokers") },
     { href: "/contact", label: "Contact", match: (p) => p.startsWith("/contact") },
@@ -79,6 +82,7 @@ export function SiteHeader({ tenant, onOpenSearch }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <LocationPicker overlay={overlay} className="max-sm:size-10 max-sm:justify-center max-sm:border-0 max-sm:p-0 max-sm:[&>span]:hidden max-sm:[&>svg:last-child]:hidden" />
             <button
               onClick={onOpenSearch}
               className={cn(
@@ -127,6 +131,10 @@ export function SiteHeader({ tenant, onOpenSearch }) {
 
       <Sheet open={menu} onOpenChange={setMenu} side="left" title={<BrandMark name={tenant.name} logoUrl={tenant.logoUrl} href={null} />}>
         <nav className="flex flex-col p-3" aria-label="Mobile">
+          <div className="mb-2 px-4 pt-1">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</p>
+            <LocationPicker className="w-full max-w-none justify-between" onPicked={() => setMenu(false)} />
+          </div>
           {links.map((l) => (
             <Link key={l.label} href={l.href} onClick={() => setMenu(false)} className="rounded-xl px-4 py-3.5 text-lg font-medium hover:bg-muted">
               {l.label}
