@@ -10,7 +10,7 @@ GET    /api/admin/properties?q=&status=&page=
          `status`: one of DRAFT|ACTIVE|PENDING|SOLD|RENTED (anything else is ignored). `page`: 1-based, 20 per page.
          -> {
               "rows": [Property + {"_count": {"leads": int, "tours": int}, "listingBroker": {"name": str} | null}],
-                      (every Property column, ordered by updatedAt desc; images is [{url, alt}]),
+                      (every Property column except roomLayout, ordered by updatedAt desc; images is [{url, alt}]),
               "total": int (rows matching the filter), "page": int, "pages": int, "pageSize": 20,
               "counts": {"ACTIVE": n, ...}   (per status, statuses with no rows are absent),
               "all": int (all properties of the tenant), "cap": int | null (null = unlimited maxListings),
@@ -38,7 +38,9 @@ PUT    /api/admin/properties/{id}       (saveProperty(id, input))
          Body: the property form object:
            {title, description, listingType: SALE|RENT, type, status, price, priceUnit, beds, baths, areaSqft,
             yearBuilt, furnishing, parking, floor, totalFloors, facing, address, locality, city, state, postalCode,
-            lat, lng, amenities: [str], images: [{url, alt}] (max 40), videoUrl, featured, listingBrokerId}
+            lat, lng, amenities: [str], images: [{url, alt}] (max 40), videoUrl, featured, listingBrokerId,
+            roomLayout: {"rooms": [...]} | null (the real floor plan for the 3D designer, see app/room_layout.py;
+                        null / no rooms = generated layout; omitted on update = unchanged)}
          Same coercions / limits / messages as the zod schema ("Beds: Too big: expected number to be <=50").
          Create is refused past the plan cap: "Your starter plan allows 25 listings. Upgrade to add more."
          The slug is generated on create and regenerated on update only when the title changed.
@@ -64,6 +66,7 @@ from app.errors import NotFound, UserError
 from app.models import Broker, Lead, Property, Tour
 from app.plans import features_json, limit_of
 from app.property_schema import js_number, js_truthy, parse_property_input
+from app.room_layout import parse_room_layout
 from app.serialize import ser
 from app.slug import slugify
 
@@ -124,6 +127,7 @@ def form_initial(p: Property) -> dict:
         "postalCode": p.postalCode or "", "lat": p.lat, "lng": p.lng, "amenities": list(p.amenities or []),
         "images": [{"url": i.get("url"), "alt": i.get("alt") or ""} for i in p.images] if isinstance(p.images, list) else [],
         "videoUrl": p.videoUrl or "", "featured": p.featured, "listingBrokerId": p.listingBrokerId or "",
+        "roomLayout": p.roomLayout,
     }
 
 
@@ -133,7 +137,7 @@ def empty_initial(tenant) -> dict:
         "priceUnit": "month", "beds": 2, "baths": 2, "areaSqft": "", "yearBuilt": "", "furnishing": "", "parking": 1,
         "floor": "", "totalFloors": "", "facing": "", "address": "", "locality": "", "city": "", "state": "",
         "postalCode": "", "lat": tenant.mapLat, "lng": tenant.mapLng, "amenities": [], "images": [], "videoUrl": "",
-        "featured": False, "listingBrokerId": "",
+        "featured": False, "listingBrokerId": "", "roomLayout": None,
     }
 
 
@@ -171,6 +175,7 @@ def list_properties(q: str | None = None, search: str | None = None, status: str
     rows = [
         ser(
             p,
+            exclude=("roomLayout",),
             _count={"leads": leads.get(p.id, 0), "tours": tours.get(p.id, 0)},
             listingBroker={"name": names[p.listingBrokerId]} if p.listingBrokerId in names else None,
         )
@@ -231,6 +236,7 @@ def _check_listing_broker(ctx: AdminCtx, broker_id: str | None) -> None:
 @router.post("")
 def create_property(body: Any = Body(default=None), ctx: AdminCtx = Depends(staff_only)):
     data = parse_property_input(body)
+    data["roomLayout"] = parse_room_layout(_body_field(body, "roomLayout"))
     _check_listing_broker(ctx, data["listingBrokerId"])
 
     cap = cap_of(ctx)
@@ -246,6 +252,8 @@ def create_property(body: Any = Body(default=None), ctx: AdminCtx = Depends(staf
 @router.put("/{id}")
 def update_property(id: str, body: Any = Body(default=None), ctx: AdminCtx = Depends(staff_only)):
     data = parse_property_input(body)
+    if isinstance(body, dict) and "roomLayout" in body:
+        data["roomLayout"] = parse_room_layout(body["roomLayout"])
     _check_listing_broker(ctx, data["listingBrokerId"])
 
     existing = find_property(ctx, id)

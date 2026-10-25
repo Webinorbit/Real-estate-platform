@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { saveProperty } from "@/app/admin/(panel)/properties/actions";
+import { FloorPlanEditor, serialiseFloorPlan } from "@/components/admin/floor-plan-editor";
 import { ImageListField } from "@/components/admin/image-uploader";
 import { LocationPicker } from "@/components/admin/location-picker";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ function Section({ title, description, children }) {
   );
 }
 
-export function PropertyForm({ id, initial, brokers, tenant }) {
+export function PropertyForm({ id, slug, initial, brokers, tenant }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [v, setV] = useState(initial);
@@ -48,7 +49,7 @@ export function PropertyForm({ id, initial, brokers, tenant }) {
       return;
     }
     start(async () => {
-      const res = await saveProperty(id || null, { ...v, listingBrokerId: v.listingBrokerId || null });
+      const res = await saveProperty(id || null, { ...v, listingBrokerId: v.listingBrokerId || null, roomLayout: serialiseFloorPlan(v.roomLayout) });
       if (!res.ok) return toast.error(res.error);
       toast.success(id ? "Property saved" : "Property created");
       if (!id) router.replace(`/admin/properties/${res.id}`);
@@ -167,6 +168,15 @@ export function PropertyForm({ id, initial, brokers, tenant }) {
         <Field label="Video link (optional)" hint="A YouTube or Vimeo URL shown on the property page." className="mt-5">
           <Input type="url" {...bind("videoUrl")} placeholder="https://" />
         </Field>
+      </Section>
+
+      <Section title="Floor plan (3D)" description="The rooms buyers and interior designers explore and furnish on the listing's 3D page.">
+        <FloorPlanEditor
+          value={v.roomLayout}
+          onChange={(roomLayout) => set({ roomLayout })}
+          specs={{ type: v.type, beds: v.beds, baths: v.baths, areaSqft: v.areaSqft }}
+          designHref={slug ? `/design/${slug}` : null}
+        />
       </Section>
 
       <div className="sticky bottom-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-border bg-background/90 px-4 py-3 shadow-lift backdrop-blur-md">

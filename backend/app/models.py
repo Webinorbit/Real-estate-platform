@@ -172,6 +172,7 @@ class Property(TenantOwned, Base):
     lng: Mapped[float] = mapped_column(Float)
     amenities = mapped_column(ARRAY(Text), default=list)
     images = mapped_column(JSONB, default=list)
+    roomLayout = mapped_column(JSONB, nullable=True)  # real floor plan for the 3D designer, see app/room_layout.py
     videoUrl: Mapped[str | None] = mapped_column(String)
     featured: Mapped[bool] = mapped_column(Boolean, default=False)
     views: Mapped[int] = mapped_column(Integer, default=0)
