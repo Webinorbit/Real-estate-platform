@@ -3,11 +3,12 @@ import { api } from "@/lib/api";
 import { PageHeader } from "@/components/ui/misc";
 import { ImportWizard } from "@/components/admin/import-wizard";
 import { ZipImport } from "@/components/admin/zip-import";
+import { DangerZone } from "@/components/admin/danger-zone";
 
 export const metadata = { title: "Bulk import" };
 
 export default async function ImportPage() {
-  const { user, features } = await adminContext({ staffOnly: true, feature: "csvImport", superBypass: true });
+  const { user, tenant, features } = await adminContext({ staffOnly: true, feature: "csvImport", superBypass: true });
   const isSuper = user.role === "SUPER";
   // On a plan without import only a super admin gets here, to upgrade the client through settings.json.
   const remaining = features.csvImport ? (await api("/api/admin/import")).remaining : null;
@@ -21,6 +22,7 @@ export default async function ImportPage() {
           <ImportWizard remaining={remaining ?? Infinity} />
         </section>
       )}
+      {["OWNER", "SUPER"].includes(user.role) && <DangerZone tenantName={tenant.name} />}
     </div>
   );
 }

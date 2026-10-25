@@ -60,7 +60,7 @@ export function ZipImport({ isSuper }) {
           <div>
             <h2 className="font-heading text-xl font-semibold">Import a full setup (.zip)</h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              One upload sets up the whole site: branding, team members with photos, and listings with their photos.
+              One upload sets up the whole site: branding, team members with photos, listings with their photos and 360° virtual tours.
               {isSuper && " As a WebInOrbit admin, a \"plan\" in settings.json also upgrades this client."}
             </p>
           </div>
@@ -106,7 +106,7 @@ export function ZipImport({ isSuper }) {
             <>
               <UploadCloud className="size-8 text-primary" />
               <p className="mt-3 font-semibold">Drop your .zip here or click to choose</p>
-              <p className="mt-1 text-sm text-muted-foreground">settings.json · team.csv · properties.csv · photos/ · hero/ · logo.png (all optional)</p>
+              <p className="mt-1 text-sm text-muted-foreground">settings.json · team.csv · properties.csv · photos/ · tours/ · hero/ · logo.png (all optional)</p>
             </>
           )}
         </button>
@@ -150,7 +150,7 @@ function ZipResult({ result, onAgain }) {
         <Stat icon={Sparkles} label="Plan" value={plan ? plan.plan.charAt(0) + plan.plan.slice(1).toLowerCase() : "Unchanged"} sub={plan?.changed ? "Upgraded" : undefined} />
         <Stat icon={Palette} label="Branding" value={settings ? (settings.updated ? "Updated" : "Not saved") : "—"} sub={settings?.updated ? [settings.logo && "logo", settings.heroImages && `${settings.heroImages} banner photos`].filter(Boolean).join(" · ") || undefined : undefined} tone={settings?.error ? "warn" : "primary"} />
         <Stat icon={Users} label="Team members" value={team ? team.created : "—"} sub={team?.skipped?.length ? `${team.skipped.length} skipped` : undefined} tone={team?.skipped?.length ? "warn" : "primary"} />
-        <Stat icon={Building2} label="Listings" value={properties ? properties.created : "—"} sub={properties ? `${properties.photos} photos${properties.failed.length ? ` · ${properties.failed.length} skipped` : ""}` : undefined} tone={properties?.failed?.length ? "warn" : "primary"} />
+        <Stat icon={Building2} label="Listings" value={properties ? properties.created : "—"} sub={properties ? [`${properties.photos} photos`, properties.tours ? `${properties.tours} tours (${properties.scenes} rooms)` : null, properties.failed.length ? `${properties.failed.length} skipped` : null].filter(Boolean).join(" · ") : undefined} tone={properties?.failed?.length ? "warn" : "primary"} />
       </div>
 
       {team?.logins?.length > 0 && (

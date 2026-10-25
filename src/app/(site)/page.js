@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowRight, BadgeCheck, Map, Route, View, Play, Search, Sparkles, KeyRound, MapPin } from "lucide-react";
 import { getTenant, tenantFeatures } from "@/lib/tenant";
 import { api } from "@/lib/api";
@@ -14,7 +15,15 @@ import { Avatar, Badge } from "@/components/ui/misc";
 export default async function HomePage() {
   const tenant = await getTenant();
   const features = tenantFeatures(tenant);
-  const { stats, localities, featured, tiles, team: allTeam, tours } = await api("/api/public/home");
+  // The visitor's chosen city (set by the header location picker); fall back to all cities if it has no listings.
+  let chosen = "";
+  try {
+    chosen = decodeURIComponent((await cookies()).get("loc_city")?.value || "").trim().slice(0, 80);
+  } catch {}
+  let home = await api(`/api/public/home${chosen ? `?city=${encodeURIComponent(chosen)}` : ""}`);
+  if (chosen && !home.featured.length) home = await api("/api/public/home");
+  const { stats, localities, featured, tiles, team: allTeam, tours, city } = home;
+  const inCity = city ? ` in ${city}` : "";
   const team = allTeam.slice(0, 4);
   const ct = cardTenant(tenant);
   const spotlight = tours[0];
@@ -58,10 +67,10 @@ export default async function HomePage() {
       <section id="featured" className="mx-auto mt-20 max-w-[90rem] scroll-mt-24 px-4 sm:px-6">
         <SectionHeading
           eyebrow="Handpicked"
-          title="Featured homes"
-          description="Standout properties our advisors personally recommend this week."
+          title={`Featured homes${inCity}`}
+          description={city ? `Handpicked and newest listings in ${city}. Change the city from the location button at the top.` : "Standout properties our advisors personally recommend this week."}
           action={
-            <ButtonLink href="/properties" variant="outline">
+            <ButtonLink href={city ? `/properties?city=${encodeURIComponent(city)}` : "/properties"} variant="outline">
               Explore on the map <ArrowRight className="size-4" />
             </ButtonLink>
           }
@@ -75,7 +84,7 @@ export default async function HomePage() {
 
       {tiles.length > 0 && (
         <section className="mx-auto mt-20 max-w-[90rem] px-4 sm:px-6">
-          <SectionHeading eyebrow="Neighbourhoods" title="Explore by area" description="Jump straight into the map for the areas people search most." />
+          <SectionHeading eyebrow="Neighbourhoods" title={`Explore${inCity || " by area"}`} description={city ? `The areas people search most in ${city}.` : "Jump straight into the map for the areas people search most."} />
           <div className="grid auto-rows-[13rem] gap-4 sm:grid-cols-2 lg:grid-cols-6">
             {tiles.map((t, i) => (
               <Reveal key={t.label} delay={i * 0.06} className={i === 0 ? "sm:col-span-2 lg:col-span-3 lg:row-span-2" : i === 1 ? "lg:col-span-3" : "lg:col-span-2"}>
