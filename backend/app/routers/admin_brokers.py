@@ -235,6 +235,11 @@ def broker_detail(broker_id: str, ctx: AdminCtx = Depends(staff_only)):
 
 @router.post("")
 def create_broker(body: dict = Body(default_factory=dict), ctx: AdminCtx = Depends(staff_only)):
+    return create_broker_record(ctx, body)
+
+
+def create_broker_record(ctx: AdminCtx, body: dict) -> dict:
+    """Validates and creates a team member with its login (shared by the team form and the zip import)."""
     data = parse_broker(body)
     password, role, mail = data.pop("password"), data.pop("role"), data.pop("email")
     db = ctx.db

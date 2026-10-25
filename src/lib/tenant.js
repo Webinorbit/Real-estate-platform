@@ -71,6 +71,7 @@ export function themeVars(tenant) {
   const primaryDark = luminance(hexToRgb(primary)) < 0.25 ? mixWithWhite(primary, 0.5) : mixWithWhite(primary, 0.12);
   return {
     "--primary": primary,
+    "--brand": primary, // the real brand colour in both themes (logo); --primary is lightened in dark mode
     "--primary-foreground": readableOn(primary),
     "--primary-dark": primaryDark,
     "--primary-dark-fg": readableOn(primaryDark),

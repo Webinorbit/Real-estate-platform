@@ -22,7 +22,7 @@ const NAV = [
   { href: "/admin/tours", label: "Virtual tours", icon: View, staff: true, feature: "tours" },
   { href: "/admin/routing", label: "Routing engine", icon: Route, staff: true, feature: "routingRules" },
   { href: "/admin/brokers", label: "Team", icon: Users, staff: true },
-  { href: "/admin/import", label: "CSV import", icon: FileUp, staff: true, feature: "csvImport" },
+  { href: "/admin/import", label: "Bulk import", icon: FileUp, staff: true, feature: "csvImport", superBypass: true },
   { href: "/admin/settings", label: "Branding & settings", icon: Settings, staff: true },
   { href: "/admin/plan", label: "Plan & billing", icon: CreditCard, staff: true },
   { href: "/admin/tenants", label: "Clients", icon: Globe2, superOnly: true },
@@ -77,7 +77,7 @@ export function AdminShell({ user, tenant, features, badges, children }) {
     });
 
   const isStaff = user.role === "SUPER" || user.role === "OWNER" || user.role === "ADMIN";
-  const items = NAV.filter((n) => (isStaff || !n.staff) && (!n.superOnly || user.role === "SUPER")).map((n) => ({ ...n, locked: n.feature && !features[n.feature] }));
+  const items = NAV.filter((n) => (isStaff || !n.staff) && (!n.superOnly || user.role === "SUPER")).map((n) => ({ ...n, locked: n.feature && !features[n.feature] && !(n.superBypass && user.role === "SUPER") }));
 
   const sidebar = (compact, onNavigate) => (
     <div className="flex h-full flex-col">

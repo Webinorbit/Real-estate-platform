@@ -32,8 +32,9 @@
   --muted-foreground: #9aa3b2;
   --border: #252a34;
   --input: #2f3541;
-  --primary: var(--primary-dark, #3fa7a8);
-  --primary-foreground: var(--primary-dark-fg, #04181a);
+  /* !important: the tenant colours are inline on <html>, which would otherwise win over this dark-mode swap. */
+  --primary: var(--primary-dark, #3fa7a8) !important;
+  --primary-foreground: var(--primary-dark-fg, #04181a) !important;
   --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -8px rgb(0 0 0 / 0.6);
   --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.4), 0 24px 48px -16px rgb(0 0 0 / 0.75);
   color-scheme: dark;

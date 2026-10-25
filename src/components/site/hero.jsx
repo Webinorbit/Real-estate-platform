@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BadgeCheck, Crosshair, MapPin, Search, View, Zap, ShieldCheck, Timer } from "lucide-react";
+import { useChosenCity } from "@/components/site/location";
 import { Select } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { PROPERTY_TYPES } from "@/lib/constants";
@@ -19,6 +20,7 @@ const TIERS = {
 
 export function Hero({ tenant, images, localities, stats }) {
   const router = useRouter();
+  const city = useChosenCity();
   const [slide, setSlide] = useState(0);
   const [lt, setLt] = useState("SALE");
   const [q, setQ] = useState("");
@@ -53,6 +55,7 @@ export function Hero({ tenant, images, localities, stats }) {
     p.set("lt", lt);
     const query = override ?? q;
     if (query) p.set("q", query);
+    else if (city) p.set("city", city);
     if (type) p.set("types", type);
     if (max) p.set("max", max);
     router.push(`/properties?${p.toString()}`);

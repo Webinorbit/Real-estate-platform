@@ -6,12 +6,13 @@ import Supercluster from "supercluster";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import {
-  ArrowUpDown, Crosshair, Flame, GripVertical, Layers, List, Loader2, Map as MapIcon, PenLine, RefreshCw, SearchX, Trash2, X,
+  ArrowUpDown, Crosshair, MapPin, Flame, GripVertical, Layers, List, Loader2, Map as MapIcon, PenLine, RefreshCw, SearchX, Trash2, X,
 } from "lucide-react";
 import { BrandLoader } from "@/components/brand-loader";
 import { FilterBar } from "@/components/map/filter-bar";
 import { MAP_STYLES, buildStyle } from "@/components/map/map-styles";
 import { createCluster, createPill, popupHtml, setPillState } from "@/components/map/markers";
+import { getChosenCity, setChosenCity, useOnCityChange } from "@/components/site/location";
 import { PropertyCard, PropertyCardSkeleton } from "@/components/site/property-card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/controls";
@@ -58,6 +59,8 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
   const popupRef = useRef(null);
   const abortRef = useRef(null);
   const programmatic = useRef(false);
+  // Moves before the first fit (initial resize/jump to the default view) must not become a search area.
+  const settledRef = useRef(false);
   const drawRef = useRef({ active: false, pts: [] });
   const stateRefs = useRef({ hoverId: null, selectedId: null, heat: false, style: "streets" });
   const sentinelRef = useRef(null);
@@ -118,7 +121,7 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
 
   const update = useCallback(
     (patch) => {
-      const resetsViewport = ["q", "near", "poly", "lt"].some((k) => k in patch);
+      const resetsViewport = ["q", "city", "near", "poly", "lt"].some((k) => k in patch);
       const next = { ...filtersRef.current, ...patch, ...(resetsViewport && !("bbox" in patch) ? { bbox: null } : {}) };
       filtersRef.current = next;
       setFilters(next);
@@ -129,6 +132,16 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
     },
     [loadSoon, syncUrl],
   );
+
+  // Follow the city picked in the header. On first load use it if the URL has no location of its own.
+  const onCity = useCallback((city) => update({ city }), [update]);
+  useOnCityChange(onCity);
+  useEffect(() => {
+    const f = filtersRef.current;
+    const stored = getChosenCity();
+    if (stored && !f.city && !f.q && !f.near && !f.poly && !f.bbox) update({ city: stored });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const reset = useCallback(() => {
     const next = { ...DEFAULT_FILTERS, lt: filtersRef.current.lt };
@@ -318,9 +331,11 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
         } else {
           fitToItems(itemsRef.current);
         }
+        settledRef.current = true;
       });
       map.on("moveend", () => {
         renderMarkers();
+        if (!settledRef.current) return;
         if (programmatic.current) {
           programmatic.current = false;
           return;
@@ -545,6 +560,7 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
               <h1 className="font-heading text-xl font-semibold">
                 {loading && !hasResults ? "Searching..." : `${items.length}${truncated ? "+" : ""} ${items.length === 1 ? "home" : "homes"}`}
                 {filters.q && <span className="font-sans text-base font-normal text-muted-foreground"> for &ldquo;{filters.q}&rdquo;</span>}
+                {filters.city && <span className="font-sans text-base font-normal text-muted-foreground"> in {filters.city}</span>}
               </h1>
               <p className="text-xs text-muted-foreground">{filters.bbox && searchAsMove ? "In the current map view" : filters.poly ? "Inside your drawn area" : filters.near ? `Within ${filters.near[2]} km of you` : "Matching your filters"}</p>
             </div>
@@ -699,6 +715,11 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
             {filters.poly && (
               <button onClick={() => update({ poly: null })} className="flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift">
                 <Trash2 className="size-3.5" /> Clear drawn area
+              </button>
+            )}
+            {filters.city && (
+              <button onClick={() => setChosenCity(null)} className="flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift" aria-label={`Show all cities instead of ${filters.city}`}>
+                <MapPin className="size-3.5" /> {filters.city} <X className="size-3.5" />
               </button>
             )}
             {filters.near && (

@@ -22,6 +22,7 @@ export const DEFAULT_FILTERS = {
   types: [],
   amen: [],
   q: "",
+  city: "",
   minArea: null,
   maxArea: null,
   tour: false,
@@ -72,6 +73,7 @@ export function parseFilters(params) {
     types: list(get(params, "types")).map((t) => t.toUpperCase()),
     amen: list(get(params, "amen")),
     q: String(get(params, "q") || "").slice(0, 100),
+    city: String(get(params, "city") || "").trim().slice(0, 80),
     minArea: num(get(params, "minArea")),
     maxArea: num(get(params, "maxArea")),
     tour: get(params, "tour") === "1",
@@ -95,6 +97,7 @@ export function filtersToQuery(filters, { includeViewport = true } = {}) {
   if (f.types?.length) p.set("types", f.types.join(","));
   if (f.amen?.length) p.set("amen", f.amen.join(","));
   if (f.q) p.set("q", f.q);
+  if (f.city) p.set("city", f.city);
   if (f.minArea != null) p.set("minArea", String(f.minArea));
   if (f.maxArea != null) p.set("maxArea", String(f.maxArea));
   if (f.tour) p.set("tour", "1");
