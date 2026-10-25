@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Layers, MapPin, View } from "lucide-react";
 import { api } from "@/lib/api";
+import { chosenCity } from "@/lib/chosen-city";
 import { getTenant, tenantFeatures } from "@/lib/tenant";
 import { formatPrice } from "@/lib/format";
 import { Badge } from "@/components/ui/misc";
@@ -14,6 +15,10 @@ export default async function ToursPage() {
   const tenant = await getTenant();
   if (!tenantFeatures(tenant).tours) notFound();
   const { tours } = await api("/api/public/tours");
+  // With a city chosen in the header, its tours come first; the rest stay below so nobody hits a dead end.
+  const city = await chosenCity();
+  const inCity = city ? tours.filter((t) => t.property.city?.toLowerCase() === city.toLowerCase()) : tours;
+  const elsewhere = city ? tours.filter((t) => !inCity.includes(t)) : [];
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-24 pt-28 sm:px-6">
@@ -26,40 +31,63 @@ export default async function ToursPage() {
       {tours.length === 0 ? (
         <p className="mt-12 rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Tours are coming soon.</p>
       ) : (
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {tours.map((t, i) => {
-            const cover = t.scenes[0]?.thumbUrl || (Array.isArray(t.property.images) ? t.property.images[0]?.url : null) || "/demo/photos/int-01.jpg";
-            return (
-              <Reveal key={t.id} delay={(i % 3) * 0.08}>
-                <Link href={`/tour/${t.id}`} className="group relative block overflow-hidden rounded-3xl border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:shadow-lift">
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <Image src={cover} alt={t.property.title} fill sizes="(max-width: 768px) 92vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                    <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
-                      <View className="size-3.5" /> {t.kind === "PANORAMA" ? "360° tour" : "3D walkthrough"}
-                    </span>
-                    <span className="absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-black opacity-90 shadow-lift transition-transform group-hover:scale-110">
-                      <View className="size-7" />
-                    </span>
-                    <p className="absolute bottom-4 left-4 font-heading text-xl font-semibold text-white">{formatPrice(t.property.price, { currency: tenant.currency, listingType: t.property.listingType, priceUnit: t.property.priceUnit })}</p>
-                  </div>
-                  <div className="p-5">
-                    <h2 className="line-clamp-1 font-heading text-lg font-semibold">{t.property.title}</h2>
-                    <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="size-3.5" /> {t.property.locality}, {t.property.city}
-                    </p>
-                    {t.scenes.length > 0 && (
-                      <Badge className="mt-3">
-                        <Layers className="size-3.5" /> {t.scenes.length} rooms
-                      </Badge>
-                    )}
-                  </div>
-                </Link>
-              </Reveal>
-            );
-          })}
+        <div className="mt-10 space-y-14">
+          {city && (
+            <section>
+              <h2 className="mb-5 font-heading text-2xl font-semibold">Tours in {city}</h2>
+              {inCity.length ? <TourGrid list={inCity} tenant={tenant} /> : (
+                <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">
+                  No virtual tours in {city} yet. Here are tours from other cities.
+                </p>
+              )}
+            </section>
+          )}
+          {(city ? elsewhere : inCity).length > 0 && (
+            <section>
+              {city && <h2 className="mb-5 font-heading text-2xl font-semibold">More tours across India</h2>}
+              <TourGrid list={city ? elsewhere : inCity} tenant={tenant} />
+            </section>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function TourGrid({ list, tenant }) {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map((t, i) => {
+        const cover = t.scenes[0]?.thumbUrl || (Array.isArray(t.property.images) ? t.property.images[0]?.url : null) || "/demo/photos/int-01.jpg";
+        return (
+          <Reveal key={t.id} delay={(i % 3) * 0.08}>
+            <Link href={`/tour/${t.id}`} className="group relative block overflow-hidden rounded-3xl border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:shadow-lift">
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <Image src={cover} alt={t.property.title} fill sizes="(max-width: 768px) 92vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
+                  <View className="size-3.5" /> {t.kind === "PANORAMA" ? "360° tour" : "3D walkthrough"}
+                </span>
+                <span className="absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-black opacity-90 shadow-lift transition-transform group-hover:scale-110">
+                  <View className="size-7" />
+                </span>
+                <p className="absolute bottom-4 left-4 font-heading text-xl font-semibold text-white">{formatPrice(t.property.price, { currency: tenant.currency, listingType: t.property.listingType, priceUnit: t.property.priceUnit })}</p>
+              </div>
+              <div className="p-5">
+                <h2 className="line-clamp-1 font-heading text-lg font-semibold">{t.property.title}</h2>
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="size-3.5" /> {t.property.locality}, {t.property.city}
+                </p>
+                {t.scenes.length > 0 && (
+                  <Badge className="mt-3">
+                    <Layers className="size-3.5" /> {t.scenes.length} rooms
+                  </Badge>
+                )}
+              </div>
+            </Link>
+          </Reveal>
+        );
+      })}
     </div>
   );
 }
