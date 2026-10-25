@@ -2,7 +2,7 @@ import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bath, BedDouble, Calendar, Car, Check, Compass, Layers, MapPin, Maximize2, Sofa, View } from "lucide-react";
+import { Bath, BedDouble, Box, Calendar, Car, Check, Compass, Layers, MapPin, Maximize2, Sofa, View } from "lucide-react";
 import { apiOrNull } from "@/lib/api";
 import { getOrigin, getTenant, tenantFeatures } from "@/lib/tenant";
 import { cardTenant, formatNumber, formatPrice, pricePerArea, titleCase } from "@/lib/format";
@@ -166,6 +166,27 @@ export default async function PropertyPage({ params }) {
                 </Link>
               </Reveal>
             )}
+
+            <Reveal>
+              <Link href={`/design/${property.slug}`} className="group relative flex flex-col gap-5 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-6 transition hover:shadow-lift sm:flex-row sm:items-center sm:p-8">
+                <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-soft transition group-hover:rotate-[-6deg] group-hover:scale-105">
+                  <Box className="size-8" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-heading text-xl font-semibold sm:text-2xl">{property.type === "PLOT" && !property.roomLayout?.rooms?.length ? "See the plot in 3D" : "3D layout & interior designer"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {property.roomLayout?.rooms?.length
+                      ? "Walk around the agency's floor plan in 3D, then furnish it, try wall colours and flooring, and share the design."
+                      : property.type === "PLOT"
+                        ? "View the plot's size and shape in 3D."
+                        : "Walk around an indicative 3D floor plan, then furnish it, try wall colours and flooring, and share the design."}
+                  </p>
+                </div>
+                <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition group-hover:brightness-110">
+                  <Sofa className="size-4" /> Open in 3D →
+                </span>
+              </Link>
+            </Reveal>
 
             {property.amenities.length > 0 && (
               <Reveal>

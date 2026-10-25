@@ -34,7 +34,7 @@ export default async function EditPropertyPage({ params }) {
           </>
         }
       />
-      <PropertyForm id={p.id} initial={initial} brokers={brokers} tenant={{ currency: tenant.currency, areaUnit: tenant.areaUnit, mapLat: tenant.mapLat, mapLng: tenant.mapLng, mapZoom: tenant.mapZoom }} />
+      <PropertyForm id={p.id} slug={p.slug} initial={initial} brokers={brokers} tenant={{ currency: tenant.currency, areaUnit: tenant.areaUnit, mapLat: tenant.mapLat, mapLng: tenant.mapLng, mapZoom: tenant.mapZoom }} />
     </div>
   );
 }
