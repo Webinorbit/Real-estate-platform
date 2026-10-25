@@ -114,9 +114,10 @@ export function LocationPicker({ overlay, className, onPicked }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  // The home page is rendered on the server from the city cookie: re-render it when the city changes.
+  // Home and tours pages are rendered on the server from the city cookie: re-render them when the city changes.
+  // (The map page follows the change itself, without a reload.)
   useEffect(() => {
-    const fn = () => pathname === "/" && router.refresh();
+    const fn = () => !pathname.startsWith("/properties") && router.refresh();
     window.addEventListener(EVENT, fn);
     return () => window.removeEventListener(EVENT, fn);
   }, [pathname, router]);

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { chosenCity } from "@/lib/chosen-city";
 import { ArrowRight, BadgeCheck, Map, Route, View, Play, Search, Sparkles, KeyRound, MapPin } from "lucide-react";
 import { getTenant, tenantFeatures } from "@/lib/tenant";
 import { api } from "@/lib/api";
@@ -16,10 +16,7 @@ export default async function HomePage() {
   const tenant = await getTenant();
   const features = tenantFeatures(tenant);
   // The visitor's chosen city (set by the header location picker); fall back to all cities if it has no listings.
-  let chosen = "";
-  try {
-    chosen = decodeURIComponent((await cookies()).get("loc_city")?.value || "").trim().slice(0, 80);
-  } catch {}
+  const chosen = await chosenCity();
   let home = await api(`/api/public/home${chosen ? `?city=${encodeURIComponent(chosen)}` : ""}`);
   if (chosen && !home.featured.length) home = await api("/api/public/home");
   const { stats, localities, featured, tiles, team: allTeam, tours, city } = home;

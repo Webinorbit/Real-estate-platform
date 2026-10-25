@@ -12,14 +12,14 @@ import { BrandLoader } from "@/components/brand-loader";
 import { FilterBar } from "@/components/map/filter-bar";
 import { MAP_STYLES, buildStyle } from "@/components/map/map-styles";
 import { createCluster, createPill, popupHtml, setPillState } from "@/components/map/markers";
-import { getChosenCity, setChosenCity, useOnCityChange } from "@/components/site/location";
+import { getChosenCity, loadCities, setChosenCity, useOnCityChange } from "@/components/site/location";
 import { PropertyCard, PropertyCardSkeleton } from "@/components/site/property-card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/controls";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/misc";
 import { Field, Input, Select } from "@/components/ui/form";
-import { DEFAULT_FILTERS, SORTS, filtersToQuery } from "@/lib/filters";
+import { DEFAULT_FILTERS, SORTS, activeFilterCount, filtersToQuery } from "@/lib/filters";
 import { circlePolygon, pointInPolygon } from "@/lib/geo";
 import { loadMapLibre } from "@/lib/maplibre-loader";
 import { cn, debounce } from "@/lib/utils";
@@ -82,7 +82,21 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
   const fitToItems = useCallback((list) => {
     const map = mapRef.current;
     const ml = mlRef.current;
-    if (!map || !ml || !list.length) return;
+    if (!map || !ml) return;
+    if (!list.length) {
+      // Nothing matches in the chosen city: still show that city, not the whole country.
+      const city = filtersRef.current.city;
+      if (city) {
+        loadCities().then((cities) => {
+          const c = cities.find((x) => x.city.toLowerCase() === city.toLowerCase());
+          if (c && mapRef.current) {
+            programmatic.current = true;
+            mapRef.current.easeTo({ center: [c.lng, c.lat], zoom: 11, duration: 700 });
+          }
+        });
+      }
+      return;
+    }
     const b = new ml.LngLatBounds();
     list.forEach((p) => b.extend([p.lng, p.lat]));
     programmatic.current = true;
@@ -144,7 +158,8 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
   }, []);
 
   const reset = useCallback(() => {
-    const next = { ...DEFAULT_FILTERS, lt: filtersRef.current.lt };
+    // Reset keeps the listing type and the city picked in the header.
+    const next = { ...DEFAULT_FILTERS, lt: filtersRef.current.lt, city: filtersRef.current.city };
     filtersRef.current = next;
     setFilters(next);
     syncUrl(next);
@@ -594,13 +609,34 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
                 {truncated && <p className="py-6 text-center text-sm text-muted-foreground">Showing the first 500 matches. Zoom in or add filters to narrow down.</p>}
               </>
             ) : (
-              <EmptyState
-                icon={SearchX}
-                title="No homes match here"
-                description="Try zooming out the map, removing a filter, or searching a different area."
-                action={<Button onClick={reset}><RefreshCw className="size-4" /> Reset filters</Button>}
-                className="mt-6"
-              />
+              filters.city ? (
+                <EmptyState
+                  icon={SearchX}
+                  title={activeFilterCount(filters) ? `No matching homes in ${filters.city}` : `No homes for ${filters.lt === "RENT" ? "rent" : "sale"} in ${filters.city} yet`}
+                  description={activeFilterCount(filters) ? "Your filters are narrowing things down. Clear them, or look at homes in all cities." : `Try ${filters.lt === "RENT" ? "buying" : "renting"} in ${filters.city}, or look at homes in all cities.`}
+                  action={
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {activeFilterCount(filters) ? (
+                        <Button onClick={reset}><RefreshCw className="size-4" /> Clear filters</Button>
+                      ) : (
+                        <Button onClick={() => update({ lt: filters.lt === "RENT" ? "SALE" : "RENT" })}>
+                          See homes for {filters.lt === "RENT" ? "sale" : "rent"} in {filters.city}
+                        </Button>
+                      )}
+                      <Button variant="outline" onClick={() => setChosenCity(null)}>Show all cities</Button>
+                    </div>
+                  }
+                  className="mt-6"
+                />
+              ) : (
+                <EmptyState
+                  icon={SearchX}
+                  title="No homes match here"
+                  description="Try zooming out the map, removing a filter, or searching a different area."
+                  action={<Button onClick={reset}><RefreshCw className="size-4" /> Reset filters</Button>}
+                  className="mt-6"
+                />
+              )
             )}
           </div>
         </section>
@@ -662,6 +698,24 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
                 </AnimatePresence>
               </div>
             </div>
+            {/* active overlay chips */}
+            <div className="pointer-events-none flex basis-full flex-col items-start gap-2 empty:hidden">
+              {filters.poly && (
+                <button onClick={() => update({ poly: null })} className="pointer-events-auto flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift">
+                  <Trash2 className="size-3.5" /> Clear drawn area
+                </button>
+              )}
+              {filters.city && (
+                <button onClick={() => setChosenCity(null)} className="pointer-events-auto flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift" aria-label={`Show all cities instead of ${filters.city}`}>
+                  <MapPin className="size-3.5" /> {filters.city} <X className="size-3.5" />
+                </button>
+              )}
+              {filters.near && (
+                <button onClick={() => update({ near: null })} className="pointer-events-auto flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift">
+                  <X className="size-3.5" /> Clear {filters.near[2]} km radius
+                </button>
+              )}
+            </div>
           </div>
 
           {/* search this area */}
@@ -710,24 +764,6 @@ export function MapSearch({ tenant, initialFilters, initialItems, localities }) 
             )}
           </div>
 
-          {/* active overlay chips */}
-          <div className="absolute left-3 top-16 z-10 flex flex-col gap-2 max-lg:top-[4.25rem]">
-            {filters.poly && (
-              <button onClick={() => update({ poly: null })} className="flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift">
-                <Trash2 className="size-3.5" /> Clear drawn area
-              </button>
-            )}
-            {filters.city && (
-              <button onClick={() => setChosenCity(null)} className="flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift" aria-label={`Show all cities instead of ${filters.city}`}>
-                <MapPin className="size-3.5" /> {filters.city} <X className="size-3.5" />
-              </button>
-            )}
-            {filters.near && (
-              <button onClick={() => update({ near: null })} className="flex items-center gap-2 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-lift">
-                <X className="size-3.5" /> Clear {filters.near[2]} km radius
-              </button>
-            )}
-          </div>
 
           {/* mobile selected card */}
           <AnimatePresence>
