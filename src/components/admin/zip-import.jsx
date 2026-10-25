@@ -9,44 +9,80 @@ import { Button, ButtonLink, buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
-/** Uploads one .zip (settings, team, listings and photos) to /api/admin/import/zip and shows what was imported. */
-function sendZip(file, onProgress) {
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/admin/import/zip");
-    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    xhr.onload = () => {
-      let body = {};
-      try {
-        body = JSON.parse(xhr.responseText);
-      } catch {}
-      resolve(xhr.status >= 200 && xhr.status < 300 ? { ok: true, ...body } : { ok: false, error: body.error || "Import failed. Please try again." });
-    };
-    xhr.onerror = () => resolve({ ok: false, error: "Upload failed. Check your connection and try again." });
+const STEP_LABEL = {
+  reading: "Reading the zip…",
+  branding: "Saving branding…",
+  team: "Adding team members…",
+  listings: "Importing listings…",
+  done: "Finishing…",
+};
+
+/** Turns a failed response into a message people can act on (proxies answer with HTML, not our JSON). */
+async function errorOf(res) {
+  const body = await res.json().catch(() => null);
+  if (body?.error) return body.error;
+  if (res.status === 413) return "The server refused a file this large. Ask your host to raise the upload limit.";
+  if (res.status === 502 || res.status === 504) return "The server took too long to answer. Please try again.";
+  return `Import failed (error ${res.status}). Please try again.`;
+}
+
+const call = (url, init) => fetch(url, { cache: "no-store", ...init });
+
+/**
+ * Sends the zip in chunks (web servers cap request size), then starts the import in the background and polls
+ * its progress, so big setups never hit upload-size or time limits.
+ */
+async function uploadAndImport(file, onState) {
+  const start = await call("/api/admin/import/zip/start", { method: "POST" });
+  if (!start.ok) throw new Error(await errorOf(start));
+  const { uploadId, chunkBytes } = await start.json();
+
+  for (let sent = 0; sent < file.size; sent += chunkBytes) {
     const form = new FormData();
-    form.append("file", file);
-    xhr.send(form);
-  });
+    form.append("chunk", file.slice(sent, sent + chunkBytes), "chunk");
+    const res = await call(`/api/admin/import/zip/${uploadId}/chunk`, { method: "POST", body: form });
+    if (!res.ok) throw new Error(await errorOf(res));
+    onState({ phase: "upload", progress: Math.min(1, (sent + chunkBytes) / file.size) });
+  }
+
+  const finish = await call(`/api/admin/import/zip/${uploadId}/finish`, { method: "POST" });
+  if (!finish.ok) throw new Error(await errorOf(finish));
+
+  for (let misses = 0; ; ) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const res = await call(`/api/admin/import/zip/${uploadId}/status`).catch(() => null);
+    if (!res?.ok) {
+      // A brief network blip or server restart: keep trying for a while before giving up.
+      if (++misses > 20) throw new Error(res ? await errorOf(res) : "Lost contact with the server. Check the listings page; the import may still have finished.");
+      continue;
+    }
+    misses = 0;
+    const job = await res.json();
+    if (job.status === "done") return job.result;
+    if (job.status === "error") throw new Error(job.error || "Import failed. Please try again.");
+    onState({ phase: "process", step: job.step, done: job.done, total: job.total });
+  }
 }
 
 export function ZipImport({ isSuper }) {
   const router = useRouter();
   const input = useRef(null);
   const [over, setOver] = useState(false);
-  const [state, setState] = useState(null); // {phase: "upload"|"process", progress, name} | {phase: "done", result}
+  const [state, setState] = useState(null); // {phase: "upload", progress} | {phase: "process", step, done, total} | {phase: "done", result}
 
   const start = async (file) => {
     if (!file) return;
     if (!/\.zip$/i.test(file.name)) return toast.error("Please choose a .zip file");
     setState({ phase: "upload", progress: 0, name: file.name });
-    const res = await sendZip(file, (p) => setState((s) => (p >= 1 ? { ...s, phase: "process", progress: 1 } : { ...s, progress: p })));
-    if (!res.ok) {
+    try {
+      const result = await uploadAndImport(file, (next) => setState((s) => ({ ...s, ...next })));
+      setState({ phase: "done", result });
+      toast.success("Import finished");
+      router.refresh();
+    } catch (err) {
       setState(null);
-      return toast.error(res.error);
+      toast.error(err.message || "Import failed. Please try again.", { duration: 10000 });
     }
-    setState({ phase: "done", result: res });
-    toast.success("Import finished");
-    router.refresh();
   };
 
   if (state?.phase === "done") return <ZipResult result={state.result} onAgain={() => setState(null)} />;
@@ -94,12 +130,17 @@ export function ZipImport({ isSuper }) {
           {busy ? (
             <>
               <Loader2 className="size-8 animate-spin text-primary" />
-              <p className="mt-3 font-semibold">{state.phase === "upload" ? `Uploading ${state.name}…` : "Setting everything up…"}</p>
+              <p className="mt-3 font-semibold">
+                {state.phase === "upload" ? `Uploading ${state.name}…` : state.step === "listings" && state.total ? `Importing listings ${Math.min(state.done + 1, state.total)} of ${state.total}…` : STEP_LABEL[state.step] || "Setting everything up…"}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {state.phase === "upload" ? `${Math.round(state.progress * 100)}%` : "Saving branding, team and listings. This can take a minute for big files."}
+                {state.phase === "upload" ? `${Math.round(state.progress * 100)}% uploaded` : "Photos and 360° tours are being processed. You can keep this tab open; big setups take a few minutes."}
               </p>
               <div className="mt-4 h-1.5 w-64 overflow-hidden rounded-full bg-muted">
-                <div className={cn("h-full rounded-full bg-primary transition-all", state.phase === "process" && "animate-pulse")} style={{ width: `${Math.round((state.phase === "process" ? 1 : state.progress) * 100)}%` }} />
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${Math.round((state.phase === "upload" ? state.progress : state.total ? state.done / state.total : 0.05) * 100)}%` }}
+                />
               </div>
             </>
           ) : (
